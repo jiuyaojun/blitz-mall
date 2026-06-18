@@ -10,4 +10,5 @@ public interface SkuRepository {
     List<Sku> findByProductId(Long productId);
     Sku save(Sku sku);
     List<Sku> saveBatch(List<Sku> skus);
+    void deleteByProductId(Long productId);
 }

@@ -21,5 +21,9 @@
             <groupId>com.blitz</groupId>
             <artifactId>blitz-data</artifactId>
         </dependency>
+        <dependency>
+            <groupId>com.blitz</groupId>
+            <artifactId>blitz-security</artifactId>
+        </dependency>
     </dependencies>
 </project>

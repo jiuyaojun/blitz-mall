@@ -46,4 +46,11 @@ public class SkuStockRepositoryImpl implements SkuStockRepository {
                 .setSql("stock = stock - " + qty)
         );
     }
+
+    @Override
+    public void deleteBySkuId(Long skuId) {
+        skuStockMapper.delete(
+            new LambdaQueryWrapper<SkuStock>().eq(SkuStock::getSkuId, skuId)
+        );
+    }
 }

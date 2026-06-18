@@ -11,4 +11,6 @@ public interface ProductRepository {
     List<Product> findAll();
     List<Product> findByCategoryId(Long categoryId, int page, int size);
     List<Product> search(String keyword, int page, int size);
+    long countByCategoryId(Long categoryId);
+    long countByKeyword(String keyword);
 }

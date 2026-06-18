@@ -47,4 +47,11 @@ public class SkuRepositoryImpl implements SkuRepository {
         }
         return skus;
     }
+
+    @Override
+    public void deleteByProductId(Long productId) {
+        skuMapper.delete(
+            new LambdaQueryWrapper<Sku>().eq(Sku::getProductId, productId)
+        );
+    }
 }

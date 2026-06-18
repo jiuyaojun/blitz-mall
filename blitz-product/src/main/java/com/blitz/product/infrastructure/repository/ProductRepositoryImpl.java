@@ -60,4 +60,21 @@ public class ProductRepositoryImpl implements ProductRepository {
         );
         return p.getRecords();
     }
+
+    @Override
+    public long countByCategoryId(Long categoryId) {
+        return productMapper.selectCount(
+            new LambdaQueryWrapper<Product>().eq(Product::getCategoryId, categoryId)
+        );
+    }
+
+    @Override
+    public long countByKeyword(String keyword) {
+        return productMapper.selectCount(
+            new LambdaQueryWrapper<Product>()
+                .like(Product::getName, keyword)
+                .or()
+                .like(Product::getBrand, keyword)
+        );
+    }
 }
