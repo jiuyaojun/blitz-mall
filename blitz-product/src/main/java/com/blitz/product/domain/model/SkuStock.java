@@ -44,4 +44,10 @@ public class SkuStock {
         this.lockStock -= qty;
         this.stock += qty;
     }
+
+    /** 恢复库存（取消订单/退款时调用） */
+    public void restore(int qty) {
+        if (this.stock == null) this.stock = 0;
+        this.stock += qty;
+    }
 }
