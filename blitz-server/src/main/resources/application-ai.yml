@@ -1,0 +1,30 @@
+# ============================================================
+# Blitz AI Module Configuration
+# PostgreSQL + pgvector + Spring AI OpenAI
+# ============================================================
+
+spring:
+  ai:
+    openai:
+      api-key: ${OPENAI_API_KEY:sk-demo}
+      base-url: ${OPENAI_BASE_URL:https://api.openai.com}
+      chat:
+        options:
+          model: gpt-4o-mini
+          temperature: 0.7
+      embedding:
+        options:
+          model: text-embedding-3-small
+
+# PostgreSQL DataSource for pgvector (separate from MySQL primary)
+blitz:
+  pg:
+    datasource:
+      jdbc-url: jdbc:postgresql://localhost:5432/blitz_ai
+      username: blitz
+      password: blitz
+      driver-class-name: org.postgresql.Driver
+      type: com.zaxxer.hikari.HikariDataSource
+      hikari:
+        maximum-pool-size: 10
+        minimum-idle: 2

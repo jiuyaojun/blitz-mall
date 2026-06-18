@@ -61,6 +61,10 @@ springdoc:
   api-docs:
     path: /v3/api-docs
 
+spring:
+  profiles:
+    include: ai
+
 logging:
   level:
     com.blitz: debug
