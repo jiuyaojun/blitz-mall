@@ -21,7 +21,6 @@
         <module>blitz-seckill</module>
         <module>blitz-ai</module>
         <module>blitz-user</module>
-        <module>blitz-admin</module>
         <module>blitz-server</module>
     </modules>
 
