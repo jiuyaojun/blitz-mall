@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>com.blitz</groupId>
+        <artifactId>blitz</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+    </parent>
+    <artifactId>blitz-product</artifactId>
+    <packaging>jar</packaging>
+    <description>商品限界上下文——商品管理、分类、搜索</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.blitz</groupId>
+            <artifactId>blitz-common</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.blitz</groupId>
+            <artifactId>blitz-data</artifactId>
+        </dependency>
+    </dependencies>
+</project>
