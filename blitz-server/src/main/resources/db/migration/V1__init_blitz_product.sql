@@ -1,0 +1,61 @@
+CREATE TABLE IF NOT EXISTS product_category (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(64) NOT NULL,
+    parent_id BIGINT DEFAULT 0,
+    level INT DEFAULT 1,
+    sort_order INT DEFAULT 0,
+    icon VARCHAR(255) DEFAULT NULL,
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted INT DEFAULT 0,
+    INDEX idx_parent_id (parent_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS product (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    category_id BIGINT NOT NULL,
+    brand VARCHAR(128) DEFAULT NULL,
+    description TEXT,
+    main_image VARCHAR(512) DEFAULT NULL,
+    images JSON DEFAULT NULL,
+    status INT DEFAULT 1 COMMENT '1-上架 0-下架',
+    sale_count INT DEFAULT 0,
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted INT DEFAULT 0,
+    INDEX idx_category_id (category_id),
+    INDEX idx_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS sku (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    product_id BIGINT NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    spec JSON DEFAULT NULL COMMENT '规格: {"颜色":"黑色","尺寸":"42"}',
+    price DECIMAL(10,2) NOT NULL,
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted INT DEFAULT 0,
+    INDEX idx_product_id (product_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS sku_stock (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    sku_id BIGINT NOT NULL UNIQUE,
+    stock INT DEFAULT 0 COMMENT '可用库存',
+    lock_stock INT DEFAULT 0 COMMENT '锁定库存(秒杀预扣)',
+    version INT DEFAULT 0 COMMENT '乐观锁版本号',
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_sku_id (sku_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS product_attribute (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    product_id BIGINT NOT NULL,
+    name VARCHAR(64) NOT NULL,
+    value VARCHAR(255) NOT NULL,
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_product_id (product_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
