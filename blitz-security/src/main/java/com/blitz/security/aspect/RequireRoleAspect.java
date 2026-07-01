@@ -9,8 +9,6 @@ import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Before;
 import org.springframework.stereotype.Component;
 
-import java.util.Arrays;
-
 @Aspect
 @Component
 @RequiredArgsConstructor
@@ -36,7 +34,13 @@ public class RequireRoleAspect {
         if (role == null) {
             throw new BusinessException(ErrorCode.UNAUTHORIZED);
         }
-        if (requireRole.value().length > 0 && !Arrays.asList(requireRole.value()).contains(role)) {
+        if (requireRole.value().length > 0) {
+            for (String required : requireRole.value()) {
+                if (required.equals(role)) return;                  // exact match
+                if ("USER".equals(required) && "MERCHANT".equals(role)) return; // MERCHANT inherits USER
+                if ("USER".equals(required) && "ADMIN".equals(role)) return;    // ADMIN inherits USER
+                if ("MERCHANT".equals(required) && "ADMIN".equals(role)) return; // ADMIN inherits MERCHANT
+            }
             throw new BusinessException(ErrorCode.FORBIDDEN);
         }
     }

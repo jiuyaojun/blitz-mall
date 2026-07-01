@@ -21,6 +21,8 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Rate-limiting filter for sensitive endpoints (login, register).
@@ -44,6 +46,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
     private static final int LOGIN_RATE_LIMIT = 10;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
+    private static final Logger log = LoggerFactory.getLogger(RateLimitFilter.class);
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
@@ -99,6 +102,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
                 Object user = body.get("username");
                 return user != null ? user.toString() : null;
             } catch (IOException e) {
+                log.warn("Failed to parse request body for rate-limit username extraction: {}", e.getMessage());
                 return null;
             }
         }

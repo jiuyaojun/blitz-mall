@@ -35,16 +35,24 @@ public class OrderController {
         return Result.success(orderQueryService.getById(order.getId()));
     }
 
-    /** 查询订单详情 */
+    /** 查询订单详情（仅订单所有者可查看） */
     @GetMapping("/{id}")
     public Result<OrderVO> detail(@PathVariable Long id) {
-        return Result.success(orderQueryService.getById(id));
+        Long userId = getCurrentUserId();
+        OrderVO order = orderQueryService.getById(id);
+        if (order == null) return Result.fail(404, "订单不存在");
+        if (!order.userId().equals(userId)) return Result.fail(403, "无权查看此订单");
+        return Result.success(order);
     }
 
-    /** 查询订单详情（按订单号） */
+    /** 查询订单详情（按订单号，仅订单所有者可查看） */
     @GetMapping("/no/{orderNo}")
     public Result<OrderVO> detailByNo(@PathVariable String orderNo) {
-        return Result.success(orderQueryService.getByOrderNo(orderNo));
+        Long userId = getCurrentUserId();
+        OrderVO order = orderQueryService.getByOrderNo(orderNo);
+        if (order == null) return Result.fail(404, "订单不存在");
+        if (!order.userId().equals(userId)) return Result.fail(403, "无权查看此订单");
+        return Result.success(order);
     }
 
     /** 当前用户订单列表 */

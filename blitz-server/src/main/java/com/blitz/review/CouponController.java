@@ -1,6 +1,7 @@
 package com.blitz.review;
 
 import com.blitz.common.result.Result;
+import com.blitz.security.annotation.RequireRole;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -28,6 +29,7 @@ public class CouponController {
             "SELECT * FROM coupon WHERE type='SHOP' AND shop_id=? AND status=1 AND claimed_count < total_count", shopId));
     }
 
+    @RequireRole("USER")
     @PostMapping("/claim/{couponId}")
     public Result<Void> claim(@PathVariable Long couponId) {
         Long userId = getCurrentUserId();
@@ -47,6 +49,7 @@ public class CouponController {
         return Result.success();
     }
 
+    @RequireRole("USER")
     @GetMapping("/my")
     public Result<List<Map<String,Object>>> myCoupons() {
         Long userId = getCurrentUserId();
@@ -55,6 +58,7 @@ public class CouponController {
             "FROM user_coupon uc JOIN coupon c ON uc.coupon_id=c.id WHERE uc.user_id=? ORDER BY uc.claim_time DESC", userId));
     }
 
+    @RequireRole("USER")
     @GetMapping("/available")
     public Result<List<Map<String,Object>>> available(@RequestParam(defaultValue="0") double amount) {
         Long userId = getCurrentUserId();
@@ -64,6 +68,7 @@ public class CouponController {
             "WHERE uc.user_id=? AND uc.status='UNUSED' AND c.min_spend <= ? ORDER BY c.discount_value DESC", userId, amount));
     }
 
+    @RequireRole("USER")
     @PostMapping("/use/{userCouponId}")
     public Result<Void> use(@PathVariable Long userCouponId) {
         Long userId = getCurrentUserId();

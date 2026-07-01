@@ -1,6 +1,7 @@
 package com.blitz.review;
 
 import com.blitz.common.result.Result;
+import com.blitz.security.annotation.RequireRole;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
@@ -32,6 +33,7 @@ public class SimpleAiController {
     private final HttpClient httpClient = HttpClient.newHttpClient();
     private final ObjectMapper objectMapper = new ObjectMapper();
 
+    @RequireRole("USER")
     @PostMapping(value = "/chat/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter chatStream(@RequestBody Map<String, Object> body) {
         getCurrentUserId(); // Require auth
@@ -97,7 +99,8 @@ public class SimpleAiController {
                             }
                         }
                     } catch (Exception e) {
-                        // Skip unparseable SSE lines
+                        // Skip unparseable SSE lines (common with streaming APIs)
+                        log.debug("SSE parse skipped: {}", e.getMessage());
                     }
                 }
                 reader.close();
@@ -117,11 +120,13 @@ public class SimpleAiController {
 
     private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(SimpleAiController.class);
 
+    @RequireRole("USER")
     @PostMapping("/session")
     public Map<String, Long> createSession(@RequestParam(defaultValue = "新对话") String title) {
         return Map.of("sessionId", 1L);
     }
 
+    @RequireRole("USER")
     @GetMapping("/session/{id}/messages")
     public List<Map<String, String>> getMessages(@PathVariable Long id) {
         return List.of(Map.of("role", "assistant", "content", "你好！有什么可以帮你的？"));

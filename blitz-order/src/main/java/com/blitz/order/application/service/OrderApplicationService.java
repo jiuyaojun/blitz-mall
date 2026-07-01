@@ -89,8 +89,10 @@ public class OrderApplicationService {
             OrderOperateLog.of(order.getId(), "ORDER_CREATED", "USER", "用户下单")
         );
 
-        // 8. 异步发布 Kafka 事件
-        if(orderEventPublisher!=null)if(orderEventPublisher!=null)if(orderEventPublisher!=null)if(orderEventPublisher!=null)if(orderEventPublisher!=null)if(orderEventPublisher!=null)if(orderEventPublisher!=null)if(orderEventPublisher!=null)if(orderEventPublisher!=null)if(orderEventPublisher!=null)if(orderEventPublisher!=null)if(orderEventPublisher!=null)orderEventPublisher.publishOrderCreated(order, orderItems);
+        // 8. 异步发布 Kafka 事件（minimal 模式下 orderEventPublisher 为 null）
+        if (orderEventPublisher != null) {
+            orderEventPublisher.publishOrderCreated(order, orderItems);
+        }
 
         log.info("Order created: orderNo={}, userId={}, amount={}", orderNo, userId, totalAmount);
         return order;
@@ -121,8 +123,10 @@ public class OrderApplicationService {
             OrderOperateLog.of(order.getId(), "ORDER_PAID", "USER", "用户支付")
         );
 
-        // Kafka 异步通知
-        if(orderEventPublisher!=null)if(orderEventPublisher!=null)if(orderEventPublisher!=null)if(orderEventPublisher!=null)if(orderEventPublisher!=null)if(orderEventPublisher!=null)if(orderEventPublisher!=null)if(orderEventPublisher!=null)if(orderEventPublisher!=null)if(orderEventPublisher!=null)if(orderEventPublisher!=null)if(orderEventPublisher!=null)orderEventPublisher.publishOrderPaid(order);
+        // Kafka 异步通知（minimal 模式下 orderEventPublisher 为 null）
+        if (orderEventPublisher != null) {
+            orderEventPublisher.publishOrderPaid(order);
+        }
 
         log.info("Order paid: orderNo={}, paymentMethod={}", order.getOrderNo(), paymentMethod);
     }
@@ -155,8 +159,10 @@ public class OrderApplicationService {
             OrderOperateLog.of(order.getId(), "ORDER_CANCELLED", "USER", reason)
         );
 
-        // Kafka 异步通知
-        if(orderEventPublisher!=null)if(orderEventPublisher!=null)if(orderEventPublisher!=null)if(orderEventPublisher!=null)if(orderEventPublisher!=null)if(orderEventPublisher!=null)if(orderEventPublisher!=null)if(orderEventPublisher!=null)if(orderEventPublisher!=null)if(orderEventPublisher!=null)if(orderEventPublisher!=null)if(orderEventPublisher!=null)orderEventPublisher.publishOrderCancelled(order, reason);
+        // Kafka 异步通知（minimal 模式下 orderEventPublisher 为 null）
+        if (orderEventPublisher != null) {
+            orderEventPublisher.publishOrderCancelled(order, reason);
+        }
 
         log.info("Order cancelled: orderNo={}, reason={}", order.getOrderNo(), reason);
     }

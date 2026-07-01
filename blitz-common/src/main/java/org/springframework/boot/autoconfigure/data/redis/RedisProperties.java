@@ -2,6 +2,12 @@ package org.springframework.boot.autoconfigure.data.redis;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
+/**
+ * Spring Boot 4.0 backward-compatible Redis property holder.
+ * In SB 4.0, RedisProperties was moved to a modular package.
+ * Redisson starter references the old package path, so this shim
+ * provides the ConfigurationProperties binding that Redisson expects.
+ */
 @ConfigurationProperties(prefix = "spring.data.redis")
 public class RedisProperties {
     private String host;

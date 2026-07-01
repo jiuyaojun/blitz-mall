@@ -4,6 +4,7 @@ import com.blitz.common.result.Result;
 import com.blitz.order.domain.model.Order;
 import com.blitz.order.domain.model.OrderStatus;
 import com.blitz.order.infrastructure.mapper.OrderMapper;
+import com.blitz.security.annotation.RequireRole;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
@@ -17,7 +18,8 @@ public class RefundController {
 
     private final OrderMapper orderMapper;
 
-    /** User requests a refund for a PAID order (before shipping) */
+    /** User requests a refund for a PAID order (before shipping) — ownership verified in method body */
+    @RequireRole("USER")
     @PostMapping("/request/{orderId}")
     public Result<Void> requestRefund(@PathVariable Long orderId, @RequestBody Map<String, String> body) {
         Long userId = getCurrentUserId();

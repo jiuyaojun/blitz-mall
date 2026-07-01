@@ -24,7 +24,7 @@ public class ProductSearchService {
     private final ProductMapper productMapper;
 
     public List<Product> search(String keyword, int page, int size) {
-        // TODO Phase 6: try ES client first, fallback to MySQL on failure
+        // Future enhancement: try ES client first, fallback to MySQL on failure
         IPage<Product> p = productMapper.selectPage(
             new Page<>(page, size),
             new LambdaQueryWrapper<Product>()

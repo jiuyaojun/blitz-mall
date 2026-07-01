@@ -75,6 +75,11 @@ public class UserApplicationService {
     }
 
     private String resolveRole(Long roleId) {
-        return roleId != null && roleId == 1L ? "ADMIN" : "USER";
+        if (roleId == null) return "USER";
+        return switch (roleId.intValue()) {
+            case 1 -> "ADMIN";
+            case 3 -> "MERCHANT";
+            default -> "USER";
+        };
     }
 }

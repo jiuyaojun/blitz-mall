@@ -45,6 +45,7 @@ public class JwtUtil {
         try {
             return parseToken(token).getExpiration().before(new Date());
         } catch (Exception e) {
+            // Token parsing failure (expired signature, malformed, etc.) — treat as expired
             return true;
         }
     }
