@@ -16,6 +16,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/ai/kb")
 @RequiredArgsConstructor
+@org.springframework.context.annotation.Profile("!minimal")
 public class KnowledgeBaseController {
 
     private final KnowledgeBaseService knowledgeBaseService;

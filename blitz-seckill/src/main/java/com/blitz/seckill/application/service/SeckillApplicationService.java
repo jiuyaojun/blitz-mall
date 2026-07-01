@@ -26,6 +26,7 @@ import java.util.Map;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@org.springframework.context.annotation.Profile("!minimal")
 public class SeckillApplicationService {
 
     private final SeckillActivityRepository activityRepository;

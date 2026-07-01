@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Configuration
+@org.springframework.context.annotation.Profile("!minimal")
 public class SentinelConfig {
 
     @PostConstruct

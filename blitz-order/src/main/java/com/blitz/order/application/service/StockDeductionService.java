@@ -48,7 +48,10 @@ public class StockDeductionService {
                     retry + 1, maxRetries, item.skuId(), stock.getVersion());
 
                 // 短暂等待后重试
-                try { Thread.sleep(50L * (retry + 1)); } catch (InterruptedException ignored) {}
+                try { Thread.sleep(50L * (retry + 1)); } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    throw new BusinessException(ErrorCode.SYSTEM_ERROR.getCode(), "库存扣减被中断");
+                }
             }
 
             if (!deducted) {
@@ -60,17 +63,26 @@ public class StockDeductionService {
     }
 
     /**
-     * 恢复库存（取消订单时调用）
+     * 恢复库存（取消订单时调用）— 使用乐观锁防止并发覆盖
      */
     public void restoreStock(Long orderId) {
         List<OrderItem> items = orderItemRepository.findByOrderId(orderId);
         for (OrderItem item : items) {
-            SkuStock stock = skuStockRepository.findBySkuId(item.getSkuId()).orElse(null);
-            if (stock != null) {
-                int currentStock = stock.getStock() != null ? stock.getStock() : 0;
-                stock.setStock(currentStock + item.getQuantity());
-                skuStockRepository.save(stock);
-                log.info("Stock restored: skuId={}, qty={}", item.getSkuId(), item.getQuantity());
+            boolean restored = false;
+            for (int retry = 0; retry < 3; retry++) {
+                SkuStock stock = skuStockRepository.findBySkuId(item.getSkuId()).orElse(null);
+                if (stock == null) break;
+                int affected = skuStockRepository.restoreStock(
+                    stock.getSkuId(), item.getQuantity(), stock.getVersion());
+                if (affected > 0) {
+                    log.info("Stock restored: skuId={}, qty={}", item.getSkuId(), item.getQuantity());
+                    restored = true;
+                    break;
+                }
+                log.warn("Stock restore retry {}/3: skuId={}", retry + 1, item.getSkuId());
+            }
+            if (!restored) {
+                log.error("Stock restore failed after 3 retries: skuId={}", item.getSkuId());
             }
         }
     }

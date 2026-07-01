@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Blitz 智能商城 — 品质生活，触手可及</title>
+  <link rel="stylesheet" href="/css/common.css">
+</head>
+<body>
+  <!-- Navbar — renderNavbar('home') fills this -->
+  <nav class="blitz-navbar" id="blitz-navbar"></nav>
+
+  <main class="main-content">
+    <!-- Two-column layout -->
+    <div class="flex gap-16">
+      <!-- LEFT: Category sidebar -->
+      <aside class="category-sidebar" id="categorySidebar">
+        <div class="text-center p-20 text-muted">加载中...</div>
+      </aside>
+
+      <!-- RIGHT: Banner + content -->
+      <div class="flex-1">
+        <!-- Banner carousel — premium product showcase -->
+        <div class="banner-carousel" id="bannerCarousel">
+          <div class="banner-slide active" style="background:linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%)">
+            <div class="banner-text">
+              <span class="banner-tag">限时特惠</span>
+              <h2>618 生活狂欢节</h2>
+              <p>全品类满300减40 · 限时秒杀低至5折</p>
+              <a href="/seckill.html" class="btn-white">立即抢购 →</a>
+            </div>
+            <div class="banner-visual">🛍️</div>
+          </div>
+          <div class="banner-slide" style="background:linear-gradient(135deg,#c0392b 0%,#e74c3c 50%,#f39c12 100%)">
+            <div class="banner-text">
+              <span class="banner-tag">新品首发</span>
+              <h2>尖货集结 · 抢先体验</h2>
+              <p>最新旗舰现货发售 · 智能穿戴新品首发</p>
+              <a href="/products.html?sort=newest" class="btn-white">去看看 →</a>
+            </div>
+            <div class="banner-visual">✨</div>
+          </div>
+          <div class="banner-slide" style="background:linear-gradient(135deg,#2c3e50 0%,#3498db 50%,#2980b9 100%)">
+            <div class="banner-text">
+              <span class="banner-tag">品质甄选</span>
+              <h2>好物精选 · 一站购齐</h2>
+              <p>家居、数码、服饰、美妆 · 用心甄选</p>
+              <a href="/products.html" class="btn-white">逛一逛 →</a>
+            </div>
+            <div class="banner-visual">🎯</div>
+          </div>
+          <div class="banner-dots" id="bannerDots">
+            <span class="dot active" data-index="0"></span>
+            <span class="dot" data-index="1"></span>
+            <span class="dot" data-index="2"></span>
+          </div>
+        </div>
+
+        <!-- Quick entry — icon + text in clean cards -->
+        <div class="quick-entries" id="quickEntries">
+          <a href="/seckill.html" class="quick-entry" style="background:linear-gradient(135deg,#fff5f5,#fff0f0)">
+            <div class="qe-icon" style="color:#e74c3c">⚡</div>
+            <div class="qe-label">限时秒杀</div>
+            <div class="qe-desc">低至5折</div>
+          </a>
+          <a href="/products.html?sort=newest" class="quick-entry" style="background:linear-gradient(135deg,#f5f7ff,#eef0ff)">
+            <div class="qe-icon" style="color:#4a6cf7">🆕</div>
+            <div class="qe-label">新品首发</div>
+            <div class="qe-desc">抢先体验</div>
+          </a>
+          <a href="/products.html?sort=sales" class="quick-entry" style="background:linear-gradient(135deg,#fff8f0,#fff5e8)">
+            <div class="qe-icon" style="color:#f59e0b">🏆</div>
+            <div class="qe-label">热销排行</div>
+            <div class="qe-desc">口碑之选</div>
+          </a>
+          <a href="/coupons.html" class="quick-entry" style="background:linear-gradient(135deg,#f0fdf4,#e8faf0)">
+            <div class="qe-icon" style="color:#10b981">🎫</div>
+            <div class="qe-label">领优惠券</div>
+            <div class="qe-desc">限时领取</div>
+          </a>
+          <a href="/shops.html" class="quick-entry" style="background:linear-gradient(135deg,#faf5ff,#f3e8ff)">
+            <div class="qe-icon" style="color:#8b5cf6">🏪</div>
+            <div class="qe-label">品牌店铺</div>
+            <div class="qe-desc">发现好店</div>
+          </a>
+        </div>
+
+        <!-- Seckill highlight section -->
+        <div class="section-header">
+          <h2><span class="section-icon">⚡</span>限时秒杀</h2>
+          <a href="/seckill.html" class="more">更多秒杀 →</a>
+        </div>
+        <div class="scene-row" id="seckillRow">
+          <div class="product-card"><div class="skeleton skeleton-card"></div><div class="card-body"><div class="skeleton skeleton-text"></div><div class="skeleton skeleton-text short"></div><div class="skeleton skeleton-price"></div></div></div>
+          <div class="product-card"><div class="skeleton skeleton-card"></div><div class="card-body"><div class="skeleton skeleton-text"></div><div class="skeleton skeleton-text short"></div><div class="skeleton skeleton-price"></div></div></div>
+          <div class="product-card"><div class="skeleton skeleton-card"></div><div class="card-body"><div class="skeleton skeleton-text"></div><div class="skeleton skeleton-text short"></div><div class="skeleton skeleton-price"></div></div></div>
+          <div class="product-card"><div class="skeleton skeleton-card"></div><div class="card-body"><div class="skeleton skeleton-text"></div><div class="skeleton skeleton-text short"></div><div class="skeleton skeleton-price"></div></div></div>
+        </div>
+
+        <!-- Category recommendation floors -->
+        <div id="sceneSections">
+          <div class="text-center text-muted" style="padding:40px">
+            <div class="spinner"></div>
+            <p class="mt-8">正在为你推荐好物...</p>
+          </div>
+        </div>
+
+        <!-- Guess You Like — based on browsing history -->
+        <div class="section-header">
+          <h2><span class="section-icon">💝</span>猜你喜欢</h2>
+        </div>
+        <div class="scene-row" id="guessYouLikeRow">
+          <div class="text-center text-muted" style="padding:24px">正在为你推荐...</div>
+        </div>
+
+      </div>
+    </div>
+  </main>
+
+  <!-- Trending — social proof section -->
+  <section style="max-width:1200px;margin:0 auto 32px;padding:0 16px">
+    <div class="section-header">
+      <h2><span class="section-icon">🔥</span>大家都在看</h2>
+    </div>
+    <div class="scene-row" id="trendingRow">
+      <div class="text-center text-muted" style="padding:24px">加载中...</div>
+    </div>
+  </section>
+
+  <!-- Footer — 4 column grid -->
+  <footer class="blitz-footer">
+    <div class="footer-inner">
+      <div class="footer-col">
+        <h4>购物指南</h4>
+        <a href="/products.html">全部商品</a>
+        <a href="/seckill.html">限时秒杀</a>
+        <a href="/products.html?sort=newest">新品首发</a>
+        <a href="/products.html?sort=sales">热销排行</a>
+      </div>
+      <div class="footer-col">
+        <h4>配送方式</h4>
+        <a href="/user.html">快递配送</a>
+        <a href="/user.html">上门自提</a>
+        <a href="/user.html">物流查询</a>
+        <a href="/products.html">配送范围</a>
+      </div>
+      <div class="footer-col">
+        <h4>售后服务</h4>
+        <a href="/user.html">退换货政策</a>
+        <a href="/user.html">退款说明</a>
+        <a href="javascript:document.querySelector('#ai-chat-fab')?.click()">联系客服</a>
+        <a href="/user.html">投诉建议</a>
+      </div>
+      <div class="footer-col">
+        <h4>关于我们</h4>
+        <a href="/brand.html">公司介绍</a>
+        <a href="/brand.html">联系我们</a>
+        <a href="/brand.html">加入我们</a>
+        <a href="/brand.html">用户协议</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      &copy; 2026 Blitz 智能商城 — 品质生活，触手可及&nbsp;&nbsp;|&nbsp;&nbsp;ICP备2026000001号&nbsp;&nbsp;|&nbsp;&nbsp;经营许可证编号
+    </div>
+  </footer>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/common.js"></script>
+  <script>
+    /* ==============================================================
+       Utility — HTML escape for XSS prevention
+       ============================================================== */
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    /* ==============================================================
+       Homepage Init
+       ============================================================== */
+    document.addEventListener('DOMContentLoaded', function() {
+      renderNavbar('home');
+      initMobileNav('home');
+
+      loadCategories();
+      startBannerCarousel();
+      loadSeckillHighlight();
+      loadSceneSections();
+      loadGuessYouLike();
+      loadTrendingSection();
+      bindQuickEntries();
+    });
+
+    /* ==============================================================
+       Category Sidebar — tree with hover sub-menus
+       ============================================================== */
+    var _categoryData = [];
+
+    async function loadCategories() {
+      var aside = document.getElementById('categorySidebar');
+      try {
+        var r = await api.getCategories();
+        if (!r.data || !r.data.length) {
+          aside.style.display = 'none';
+          return;
+        }
+        _categoryData = r.data;
+        renderCategoryTree(_categoryData, aside);
+        aside.style.display = '';
+      } catch (e) {
+        aside.style.display = 'none';
+      }
+    }
+
+    function renderCategoryTree(tree, aside) {
+      var html = '<div class="cat-all-label">全部分类</div>';
+      tree.forEach(function(cat) {
+        var hasChildren = cat.children && cat.children.length > 0;
+        html += '<div class="cat-item" data-id="' + cat.id + '">';
+        html += '<a href="/products.html?categoryId=' + cat.id + '" class="cat-link">' + (cat.icon || '') + ' ' + cat.name + '</a>';
+        html += hasChildren ? '<span class="cat-arrow">›</span>' : '';
+        if (hasChildren) {
+          html += '<div class="cat-sub">';
+          html += '<div class="sub-title">' + cat.name + '</div>';
+          cat.children.forEach(function(sub) {
+            html += '<a href="/products.html?categoryId=' + sub.id + '">' + (sub.icon || '') + ' ' + sub.name + '</a>';
+          });
+          html += '</div>';
+        }
+        html += '</div>';
+      });
+      html += '<div class="cat-footer"><a href="/products.html">查看全部 ›</a></div>';
+      aside.innerHTML = html;
+    }
+
+    /* ==============================================================
+       Banner Carousel — auto-rotate every 4s, dot navigation
+       ============================================================== */
+    function startBannerCarousel() {
+      var slides = document.querySelectorAll('#bannerCarousel .banner-slide');
+      var dots = document.querySelectorAll('#bannerDots .dot');
+      if (!slides.length) return;
+
+      var current = 0;
+      var total = slides.length;
+      var timer = null;
+
+      function goTo(idx) {
+        slides[current].classList.remove('active');
+        dots[current].classList.remove('active');
+        current = ((idx % total) + total) % total;
+        slides[current].classList.add('active');
+        dots[current].classList.add('active');
+      }
+
+      function next() {
+        goTo(current + 1);
+      }
+
+      timer = setInterval(next, 4000);
+
+      // Dot click
+      dots.forEach(function(dot) {
+        dot.addEventListener('click', function() {
+          goTo(parseInt(this.getAttribute('data-index'), 10));
+          // Reset timer on manual interaction
+          clearInterval(timer);
+          timer = setInterval(next, 4000);
+        });
+      });
+    }
+
+    /* ==============================================================
+       Quick Entry Icons — bind click for coupon & checkin
+       ============================================================== */
+    function bindQuickEntries() {
+      var coupon = document.getElementById('couponEntry');
+      var checkin = document.getElementById('checkinEntry');
+      if (coupon) {
+        coupon.addEventListener('click', function() {
+          if (typeof showToast === 'function') showToast('优惠券功能即将上线，敬请期待！', 'info');
+        });
+      }
+      if (checkin) {
+        checkin.addEventListener('click', function() {
+          if (typeof showToast === 'function') showToast('签到成功！+10积分 🎉', 'success');
+        });
+      }
+    }
+
+    /* ==============================================================
+       Seckill Highlight — 4 product cards with 60% off prices
+       ============================================================== */
+    async function loadSeckillHighlight() {
+      var row = document.getElementById('seckillRow');
+      try {
+        var r = await api.getProducts({ size: 8 });
+        if (!r.data || !r.data.records || !r.data.records.length) {
+          row.innerHTML = '<div style="padding:24px;color:var(--text-muted)">暂无秒杀商品</div>';
+          return;
+        }
+        // Take 4 products for seckill row
+        var products = r.data.records.slice(0, 4);
+        var html = '';
+        products.forEach(function(p) {
+          var image = p.image || p.mainImage || '';
+          var skuPrice = (p.skus && p.skus[0]) ? p.skus[0].price : (p.price || 1999);
+          var original = Number(skuPrice) || 1999;
+          var seckillPrice = Math.floor(original * 0.6);
+          var shopName = p.shopName || p.brand || 'Blitz精选';
+          var sales = p.sales || Math.floor(Math.random() * 5000) + 500;
+
+          html += '<a href="/seckill.html" class="product-card">' +
+            '<button class="card-fav' + (FAVS.isFaved(p.id) ? ' faved' : '') + '" data-pid="' + p.id + '" onclick="event.preventDefault();event.stopPropagation();FAVS.toggle(' + p.id + ');this.classList.toggle(\'faved\');this.textContent=this.classList.contains(\'faved\')?\'♥\':\'♡\'">' + (FAVS.isFaved(p.id) ? '♥' : '♡') + '</button>' +
+            '<div class="card-img">' +
+              (image
+                ? '<img src="' + escapeHtml(image) + '" alt="' + escapeHtml(p.name) + '" loading="lazy">'
+                : '<span class="img-placeholder">📱</span>'
+              ) +
+              '<div class="qv-overlay"><span class="qv-btn" onclick="event.stopPropagation();location.href=\'/detail.html?id=' + p.id + '\'">Quick View</span></div>' +
+            '</div>' +
+            '<span class="card-tag seckill">秒杀</span>' +
+            '<div class="card-body">' +
+              '<div class="card-name">' + escapeHtml(p.name || '商品名称') + '</div>' +
+              '<div class="card-price-row">' +
+                '<span class="card-price">' + formatPrice(seckillPrice) + '</span>' +
+                '<span class="original">' + formatPrice(original) + '</span>' +
+              '</div>' +
+              '<div class="card-meta">' +
+                '<span class="card-shop">' + escapeHtml(shopName || '') + '</span>' +
+                '<span>已售' + (typeof formatNumber === 'function' ? formatNumber(sales) : sales) + '</span>' +
+              '</div>' +
+            '</div>' +
+          '</a>';
+        });
+        row.innerHTML = html;
+      } catch (e) {
+        row.innerHTML = '<div style="padding:24px;color:var(--text-muted)">加载失败</div>';
+      }
+    }
+
+    /* ==============================================================
+       Category Recommendation Floors — top 3 categories, 6 products each
+       ============================================================== */
+    async function loadSceneSections() {
+      var container = document.getElementById('sceneSections');
+      try {
+        // Ensure categories are loaded; if not, fetch them first
+        if (!_categoryData.length) {
+          var catR = await api.getCategories();
+          if (catR.data) _categoryData = catR.data;
+        }
+        if (!_categoryData.length) {
+          container.innerHTML = '';
+          return;
+        }
+
+        var topCats = _categoryData.slice(0, 3);
+        // Clear loading spinner
+        container.innerHTML = '';
+
+        for (var i = 0; i < topCats.length; i++) {
+          var cat = topCats[i];
+          try {
+            var pr = await api.getProducts({ categoryId: cat.id, size: 6 });
+            if (!pr.data || !pr.data.records || !pr.data.records.length) continue;
+
+            var products = pr.data.records;
+
+            // Section header
+            var header = document.createElement('div');
+            header.className = 'section-header';
+            header.innerHTML = '<h2>' + (cat.icon ? cat.icon + ' ' : '') + cat.name + '</h2>' +
+              '<a href="/products.html?categoryId=' + cat.id + '" class="more">查看更多 →</a>';
+            container.appendChild(header);
+
+            // Scene row
+            var sceneRow = document.createElement('div');
+            sceneRow.className = 'scene-row';
+            var rowHtml = '';
+            products.forEach(function(p) {
+              var image = p.image || p.mainImage || '';
+              var price = (p.skus && p.skus[0]) ? p.skus[0].price : (p.price || 0);
+              var originalPrice = p.originalPrice || (Number(price) > 0 ? Math.floor(Number(price) * 1.3) : 0);
+              var shopName = p.shopName || p.brand || '';
+              var sales = p.sales || Math.floor(Math.random() * 3000) + 100;
+
+              // Determine tag
+              var tagHtml = '';
+              if (p.isNew || Math.random() < 0.2) {
+                tagHtml = '<span class="card-tag new">新品</span>';
+              } else if (sales > 2000) {
+                tagHtml = '<span class="card-tag hot">热销</span>';
+              }
+
+              rowHtml += '<a href="/detail.html?id=' + p.id + '" class="product-card">' +
+                '<button class="card-fav' + (FAVS.isFaved(p.id) ? ' faved' : '') + '" data-pid="' + p.id + '" onclick="event.preventDefault();event.stopPropagation();FAVS.toggle(' + p.id + ');this.classList.toggle(\'faved\');this.textContent=this.classList.contains(\'faved\')?\'♥\':\'♡\'">' + (FAVS.isFaved(p.id) ? '♥' : '♡') + '</button>' +
+                '<div class="card-img">' +
+                  (image
+                    ? '<img src="' + escapeHtml(image) + '" alt="' + escapeHtml(p.name) + '" loading="lazy">'
+                    : '<span class="img-placeholder">🛍️</span>'
+                  ) +
+                  '<div class="qv-overlay"><span class="qv-btn" onclick="event.stopPropagation();location.href=\'/detail.html?id=' + p.id + '\'">Quick View</span></div>' +
+                '</div>' +
+                tagHtml +
+                '<div class="card-body">' +
+                  '<div class="card-name">' + escapeHtml(p.name || '商品名称') + '</div>' +
+                  '<div class="card-price-row">' +
+                    '<span class="card-price">' + formatPrice(price) + '</span>' +
+                    (originalPrice > price ? '<span class="original">' + formatPrice(originalPrice) + '</span>' : '') +
+                  '</div>' +
+                  '<div class="card-meta">' +
+                    '<span class="card-shop">' + escapeHtml(shopName || '') + '</span>' +
+                    '<span>' + (typeof formatNumber === 'function' ? formatNumber(sales) + '人已购' : sales + '人已购') + '</span>' +
+                  '</div>' +
+                '</div>' +
+              '</a>';
+            });
+            sceneRow.innerHTML = rowHtml;
+            container.appendChild(sceneRow);
+          } catch (e) {
+            // Skip categories that fail to load
+          }
+        }
+
+        // If nothing was rendered, show empty state
+        if (!container.children.length) {
+          container.innerHTML = '<div class="empty-state"><div class="empty-icon">📦</div><h3>暂无推荐</h3><p>更多好物即将上架，敬请期待</p></div>';
+        }
+      } catch (e) {
+        container.innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><h3>加载失败</h3><p>请刷新页面重试</p></div>';
+      }
+    }
+
+    /* ==============================================================
+       Guess You Like — products from browsed categories or random
+       ============================================================== */
+    async function loadGuessYouLike() {
+      var row = document.getElementById('guessYouLikeRow');
+      try {
+        var historyIds = typeof BROWSING_HISTORY !== 'undefined' ? BROWSING_HISTORY.getAll() : [];
+        var products = [];
+
+        if (historyIds.length > 0) {
+          // Fetch first history product to learn preferred category
+          try {
+            var firstProduct = await api.getProduct(historyIds[0]);
+            if (firstProduct.data && firstProduct.data.categoryId) {
+              var r = await api.getProducts({ categoryId: firstProduct.data.categoryId, size: 7 });
+              if (r.data && r.data.records && r.data.records.length) {
+                // Exclude the already-viewed product, take up to 6
+                products = r.data.records.filter(function(p) { return p.id !== historyIds[0]; }).slice(0, 6);
+              }
+            }
+          } catch(e) { /* fall through to fallback */ }
+        }
+
+        // Fallback: random products
+        if (!products.length) {
+          var r = await api.getProducts({ size: 6 });
+          if (r.data && r.data.records) products = r.data.records;
+        }
+
+        if (!products.length) {
+          row.innerHTML = '';
+          return;
+        }
+
+        var html = '';
+        products.forEach(function(p) {
+          var image = p.image || p.mainImage || '';
+          var price = (p.skus && p.skus[0]) ? p.skus[0].price : (p.price || 0);
+          var shopName = p.shopName || p.brand || '';
+
+          html += '<a href="/detail.html?id=' + p.id + '" class="product-card">' +
+            '<button class="card-fav' + (FAVS.isFaved(p.id) ? ' faved' : '') + '" data-pid="' + p.id + '" onclick="event.preventDefault();event.stopPropagation();FAVS.toggle(' + p.id + ');this.classList.toggle(\'faved\');this.textContent=this.classList.contains(\'faved\')?\'♥\':\'♡\'">' + (FAVS.isFaved(p.id) ? '♥' : '♡') + '</button>' +
+            '<div class="card-img">' +
+              (image
+                ? '<img src="' + escapeHtml(image) + '" alt="' + escapeHtml(p.name) + '" loading="lazy">'
+                : '<span class="img-placeholder">🛍️</span>'
+              ) +
+              '<div class="qv-overlay"><span class="qv-btn" onclick="event.stopPropagation();location.href=\'/detail.html?id=' + p.id + '\'">Quick View</span></div>' +
+            '</div>' +
+            '<div class="card-body">' +
+              '<div class="card-name">' + escapeHtml(p.name || '商品名称') + '</div>' +
+              '<div class="card-price-row">' +
+                '<span class="card-price">' + formatPrice(price) + '</span>' +
+              '</div>' +
+              '<div class="card-meta">' +
+                '<span class="card-shop">' + escapeHtml(shopName || '') + '</span>' +
+              '</div>' +
+            '</div>' +
+          '</a>';
+        });
+        row.innerHTML = html;
+      } catch(e) {
+        row.innerHTML = '';
+      }
+    }
+
+    /* ==============================================================
+       Trending — everyone is viewing (random products + social proof)
+       ============================================================== */
+    async function loadTrendingSection() {
+      var row = document.getElementById('trendingRow');
+      try {
+        var r = await api.getProducts({ size: 6 });
+        if (!r.data || !r.data.records || !r.data.records.length) {
+          row.innerHTML = '';
+          return;
+        }
+        var products = r.data.records;
+        var html = '';
+        products.forEach(function(p) {
+          var image = p.image || p.mainImage || '';
+          var price = (p.skus && p.skus[0]) ? p.skus[0].price : (p.price || 0);
+          var shopName = p.shopName || p.brand || '';
+          // Social proof: randomized view count
+          var views = Math.floor(Math.random() * 8000) + 200;
+
+          html += '<a href="/detail.html?id=' + p.id + '" class="product-card">' +
+            '<button class="card-fav' + (FAVS.isFaved(p.id) ? ' faved' : '') + '" data-pid="' + p.id + '" onclick="event.preventDefault();event.stopPropagation();FAVS.toggle(' + p.id + ');this.classList.toggle(\'faved\');this.textContent=this.classList.contains(\'faved\')?\'♥\':\'♡\'">' + (FAVS.isFaved(p.id) ? '♥' : '♡') + '</button>' +
+            '<div class="card-img">' +
+              (image
+                ? '<img src="' + escapeHtml(image) + '" alt="' + escapeHtml(p.name) + '" loading="lazy">'
+                : '<span class="img-placeholder">🔥</span>'
+              ) +
+              '<div class="qv-overlay"><span class="qv-btn" onclick="event.stopPropagation();location.href=\'/detail.html?id=' + p.id + '\'">Quick View</span></div>' +
+            '</div>' +
+            '<div class="card-body">' +
+              '<div class="card-name">' + escapeHtml(p.name || '商品名称') + '</div>' +
+              '<div class="card-price-row">' +
+                '<span class="card-price">' + formatPrice(price) + '</span>' +
+              '</div>' +
+              '<div class="card-meta">' +
+                '<span class="card-shop">' + escapeHtml(shopName || '') + '</span>' +
+                '<span>' + (typeof formatNumber === 'function' ? formatNumber(views) : views) + '人已浏览</span>' +
+              '</div>' +
+            '</div>' +
+          '</a>';
+        });
+        row.innerHTML = html;
+      } catch(e) {
+        row.innerHTML = '';
+      }
+    }
+
+    /* ==============================================================
+       Track product card clicks into browsing history
+       ============================================================== */
+    document.addEventListener('click', function(e) {
+      var card = e.target.closest('.product-card');
+      if (!card) return;
+      var favBtn = card.querySelector('.card-fav');
+      if (favBtn) {
+        var pid = favBtn.getAttribute('data-pid');
+        if (pid && typeof BROWSING_HISTORY !== 'undefined') {
+          BROWSING_HISTORY.add(Number(pid));
+        }
+      }
+    });
+  </script>
+</body>
+</html>

@@ -15,6 +15,7 @@ import java.util.List;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@org.springframework.context.annotation.Profile("!minimal")
 public class SeckillCacheService {
 
     private final SeckillProductRepository seckillProductRepository;

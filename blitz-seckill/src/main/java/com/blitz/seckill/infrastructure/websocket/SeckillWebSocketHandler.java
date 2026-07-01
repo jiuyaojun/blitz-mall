@@ -42,8 +42,11 @@ public class SeckillWebSocketHandler extends TextWebSocketHandler {
         if ("ping".equals(message.getPayload())) {
             try {
                 session.sendMessage(new TextMessage("pong"));
-            } catch (Exception ignored) {}
-        }
+            } catch (Exception e) {
+                log.warn("Failed to send pong, removing session: userId={}", getUserId(session), e);
+                Long uid = getUserId(session);
+                if (uid != null) userSessions.remove(uid);
+            }
     }
 
     /** 推送秒杀结果给指定用户 */

@@ -12,6 +12,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 @Configuration
+@org.springframework.context.annotation.Profile("!minimal")
 public class PgVectorConfig {
 
     @Bean

@@ -6,23 +6,23 @@
 spring:
   ai:
     openai:
-      api-key: ${OPENAI_API_KEY:sk-demo}
-      base-url: ${OPENAI_BASE_URL:https://api.openai.com}
+      api-key: ${OPENAI_API_KEY}
+      base-url: ${OPENAI_BASE_URL:https://open.bigmodel.cn/api/paas/v4}
       chat:
         options:
-          model: gpt-4o-mini
+          model: glm-4-flash
           temperature: 0.7
       embedding:
         options:
-          model: text-embedding-3-small
+          model: embedding-2
 
 # PostgreSQL DataSource for pgvector (separate from MySQL primary)
 blitz:
   pg:
     datasource:
       jdbc-url: jdbc:postgresql://localhost:5432/blitz_ai
-      username: blitz
-      password: blitz
+      username: ${PG_USER:blitz}
+      password: ${PG_PASSWORD}
       driver-class-name: org.postgresql.Driver
       type: com.zaxxer.hikari.HikariDataSource
       hikari:

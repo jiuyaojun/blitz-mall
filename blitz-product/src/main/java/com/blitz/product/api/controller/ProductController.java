@@ -6,6 +6,7 @@ import com.blitz.product.api.dto.ProductDTO;
 import com.blitz.product.api.dto.ProductVO;
 import com.blitz.product.application.service.ProductApplicationService;
 import com.blitz.security.annotation.RequireRole;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -23,7 +24,7 @@ public class ProductController {
 
     @GetMapping("/list")
     public Result<PageResult<ProductVO>> listByCategory(
-            @RequestParam Long categoryId,
+            @RequestParam(required = false) Long categoryId,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size) {
         return Result.success(productApplicationService.listByCategory(categoryId, page, size));
@@ -39,13 +40,13 @@ public class ProductController {
 
     @PostMapping
     @RequireRole("ADMIN")
-    public Result<ProductVO> create(@RequestBody ProductDTO dto) {
+    public Result<ProductVO> create(@Valid @RequestBody ProductDTO dto) {
         return Result.success(productApplicationService.create(dto));
     }
 
     @PutMapping("/{id}")
     @RequireRole("ADMIN")
-    public Result<ProductVO> update(@PathVariable Long id, @RequestBody ProductDTO dto) {
+    public Result<ProductVO> update(@PathVariable Long id, @Valid @RequestBody ProductDTO dto) {
         return Result.success(productApplicationService.update(id, dto));
     }
 

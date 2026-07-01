@@ -9,8 +9,10 @@ public interface ProductRepository {
     Optional<Product> findById(Long id);
     Product save(Product product);
     List<Product> findAll();
+    List<Product> findAll(int page, int size);
     List<Product> findByCategoryId(Long categoryId, int page, int size);
     List<Product> search(String keyword, int page, int size);
+    long countAll();
     long countByCategoryId(Long categoryId);
     long countByKeyword(String keyword);
 }

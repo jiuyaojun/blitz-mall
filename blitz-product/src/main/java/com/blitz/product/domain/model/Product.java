@@ -13,6 +13,7 @@ public class Product {
     private String name;
     private Long categoryId;
     private String brand;
+    private Long shopId;
     private String description;
     private String mainImage;
     private String images;  // JSON array

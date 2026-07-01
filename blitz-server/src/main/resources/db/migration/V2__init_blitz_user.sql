@@ -7,7 +7,8 @@ CREATE TABLE IF NOT EXISTS role (
 
 INSERT INTO role (name, permissions) VALUES
 ('ADMIN', '["*:*"]'),
-('USER', '["order:read","order:write","product:read"]')
+('USER', '["order:read","order:write","product:read"]'),
+('MERCHANT', '["product:read","product:write","order:read","order:write","shop:read","shop:write","review:reply"]')
 ON DUPLICATE KEY UPDATE name=name;
 
 CREATE TABLE IF NOT EXISTS user (
@@ -24,7 +25,8 @@ CREATE TABLE IF NOT EXISTS user (
     update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     deleted INT DEFAULT 0,
     INDEX idx_username (username),
-    INDEX idx_phone (phone)
+    INDEX idx_phone (phone),
+    INDEX idx_email (email)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS address (

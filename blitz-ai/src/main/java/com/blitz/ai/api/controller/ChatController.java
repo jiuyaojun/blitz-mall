@@ -17,6 +17,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/ai")
 @RequiredArgsConstructor
+@org.springframework.context.annotation.Profile("!minimal")
 public class ChatController {
 
     private final ChatApplicationService chatApplicationService;

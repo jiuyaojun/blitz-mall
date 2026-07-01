@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>全部商品 - Blitz 智能商城</title>
+<link rel="stylesheet" href="/css/common.css">
+</head>
+<body>
+
+<nav id="blitz-navbar" class="blitz-navbar"></nav>
+
+<main class="main-content">
+
+  <!-- Breadcrumb -->
+  <div class="breadcrumb" id="breadcrumb">
+    <a href="/">首页</a>
+    <span class="sep">&gt;</span>
+    <a href="/products.html">全部商品</a>
+    <span id="breadcrumbCategorySep" class="sep hidden">&gt;</span>
+    <span id="breadcrumbCategory" class="hidden"></span>
+    <span id="breadcrumbKeywordSep" class="sep hidden">&gt;</span>
+    <span id="breadcrumbKeyword" class="hidden"></span>
+  </div>
+
+  <!-- Category filter bar -->
+  <div class="filter-bar" id="categoryFilterBar">
+    <span class="filter-label">分类：</span>
+    <span id="categoryPills"></span>
+  </div>
+
+  <!-- Brand filter bar -->
+  <div class="filter-bar" id="brandFilterBar" style="display:none">
+    <span class="filter-label">品牌：</span>
+    <span id="brandPills"></span>
+  </div>
+
+  <!-- Price range -->
+  <div class="filter-bar" style="gap:6px;flex-wrap:wrap">
+    <span class="filter-label">价格：</span>
+    <input type="number" id="priceMin" class="form-input" placeholder="最低价" style="width:100px;min-height:32px;padding:4px 8px;font-size:12px">
+    <span style="color:var(--text-muted)">—</span>
+    <input type="number" id="priceMax" class="form-input" placeholder="最高价" style="width:100px;min-height:32px;padding:4px 8px;font-size:12px">
+    <button class="btn btn-sm btn-outline" id="priceFilterBtn" style="min-height:32px">确定</button>
+    <button class="btn btn-sm btn-outline" id="priceClearBtn" style="min-height:32px;display:none">清除</button>
+  </div>
+
+  <!-- Sort bar -->
+  <div class="filter-bar" id="sortBar">
+    <span class="filter-label">排序：</span>
+    <button class="category-pill active" data-sort="">综合</button>
+    <button class="category-pill" data-sort="sales">销量</button>
+    <button class="category-pill" data-sort="price_asc">价格升序</button>
+    <button class="category-pill" data-sort="price_desc">价格降序</button>
+    <button class="category-pill" data-sort="newest">最新</button>
+  </div>
+
+  <!-- Product count -->
+  <div id="productCount" class="filter-bar hidden"></div>
+
+  <!-- Product grid -->
+  <div id="productGrid" class="product-grid"></div>
+
+  <!-- Loading -->
+  <div id="loadingArea"><div class="spinner"></div></div>
+
+  <!-- Empty state -->
+  <div id="emptyState" class="empty-state hidden">
+    <div class="empty-icon">📦</div>
+    <h3 id="emptyTitle">暂无商品</h3>
+    <p id="emptyDesc">试试其他分类或搜索关键词吧</p>
+    <a href="/products.html" class="btn btn-outline mt-16">查看全部商品</a>
+  </div>
+
+  <!-- Error state -->
+  <div id="errorState" class="empty-state hidden">
+    <div class="empty-icon">😞</div>
+    <h3 id="errorTitle">加载失败</h3>
+    <p id="errorDesc">请检查网络连接后重试</p>
+    <button id="retryBtn" class="btn btn-primary mt-16">重新加载</button>
+  </div>
+
+  <!-- Pagination -->
+  <div id="pagination" class="pagination hidden"></div>
+
+  <!-- Compare floating bar -->
+  <div id="compareBar" class="compare-bar hidden">
+    <span class="compare-bar-text" id="compareBarText">已选 0 件商品</span>
+    <button class="btn btn-primary btn-sm" id="compareStartBtn">开始对比</button>
+    <button class="btn btn-outline btn-sm" id="compareClearBtn">清空</button>
+  </div>
+
+</main>
+
+<!-- Compare Modal -->
+<div class="modal-overlay" id="compareModalOverlay">
+  <div class="modal" style="max-width: 960px;">
+    <h4>商品对比</h4>
+    <div class="table-wrap">
+      <table class="compare-table" id="compareTable"></table>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-outline" id="compareModalClose">关闭</button>
+    </div>
+  </div>
+</div>
+
+<footer class="blitz-footer">
+  <div class="footer-inner">
+    <div class="footer-col">
+      <h4>购物指南</h4>
+      <a href="/products.html">全部商品</a>
+      <a href="/seckill.html">秒杀专区</a>
+      <a href="/products.html?sort=newest">新品首发</a>
+    </div>
+    <div class="footer-col">
+      <h4>客户服务</h4>
+      <a href="/user.html">我的订单</a>
+      <a href="javascript:void(0)" onclick="showToast('页面建设中','info')">帮助中心</a>
+      <a href="javascript:void(0)" onclick="showToast('页面建设中','info')">联系我们</a>
+    </div>
+    <div class="footer-col">
+      <h4>关于 Blitz</h4>
+      <a href="javascript:void(0)" onclick="showToast('页面建设中','info')">品牌故事</a>
+      <a href="javascript:void(0)" onclick="showToast('页面建设中','info')">隐私政策</a>
+      <a href="javascript:void(0)" onclick="showToast('页面建设中','info')">用户协议</a>
+    </div>
+    <div class="footer-col">
+      <h4>关注我们</h4>
+      <a href="javascript:void(0)" onclick="showToast('页面建设中','info')">微信公众号</a>
+      <a href="javascript:void(0)" onclick="showToast('页面建设中','info')">新浪微博</a>
+      <a href="javascript:void(0)" onclick="showToast('页面建设中','info')">抖音小店</a>
+    </div>
+  </div>
+  <div class="footer-bottom">&copy; 2026 Blitz 智能商城 · 品质生活，触手可及</div>
+</footer>
+
+<script src="/js/common.js"></script>
+<script src="/js/api.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  /* ==================== COMPARE ==================== */
+  var COMPARE = {
+    _key: 'blitz_compare',
+    getAll: function() { try { return JSON.parse(localStorage.getItem(this._key) || '[]'); } catch(e) { return []; } },
+    add: function(id) { var ids = this.getAll(); if (ids.indexOf(id) === -1 && ids.length < 4) { ids.push(id); this._save(ids); } },
+    remove: function(id) { this._save(this.getAll().filter(function(x) { return x !== id; })); },
+    toggle: function(id) { this.has(id) ? this.remove(id) : this.add(id); },
+    has: function(id) { return this.getAll().indexOf(id) !== -1; },
+    count: function() { return this.getAll().length; },
+    clear: function() { this._save([]); },
+    _save: function(ids) { localStorage.setItem(this._key, JSON.stringify(ids)); }
+  };
+
+  /* ==================== State ==================== */
+  var state = {
+    categoryId: null,
+    keyword: '',
+    sort: '',
+    brand: '',
+    priceMin: '',
+    priceMax: '',
+    page: 1,
+    size: 12,
+    total: 0,
+    pages: 0,
+    products: [],
+    categories: [],
+    categoryName: ''
+  };
+
+  /* ==================== Init ==================== */
+  document.addEventListener('DOMContentLoaded', function () {
+    renderNavbar('products');
+    initMobileNav('products');
+    readQueryParams();
+    updateBreadcrumb();
+    updateSortButtons();
+    updateCompareBar();
+    loadCategories().then(function () {
+      return loadProducts();
+    });
+    bindEvents();
+  });
+
+  /* ==================== Query Params ==================== */
+  function readQueryParams() {
+    var cid = getQueryParam('categoryId');
+    state.categoryId = cid || null;
+    var kw = getQueryParam('keyword');
+    state.keyword = kw ? kw.trim() : '';
+    var s = getQueryParam('sort');
+    if (s === 'sales' || s === 'price_asc' || s === 'price_desc' || s === 'newest') {
+      state.sort = s;
+    } else {
+      state.sort = '';
+    }
+    var p = parseInt(getQueryParam('page'), 10);
+    state.page = (p >= 1) ? p : 1;
+  }
+
+  function updateURL() {
+    var params = new URLSearchParams();
+    if (state.categoryId) params.set('categoryId', state.categoryId);
+    if (state.keyword) params.set('keyword', state.keyword);
+    if (state.sort) params.set('sort', state.sort);
+    if (state.page > 1) params.set('page', String(state.page));
+    var qs = params.toString();
+    var newURL = location.pathname + (qs ? '?' + qs : '');
+    history.pushState(null, '', newURL);
+  }
+
+  /* ==================== Breadcrumb ==================== */
+  function updateBreadcrumb() {
+    var catSep = document.getElementById('breadcrumbCategorySep');
+    var catEl = document.getElementById('breadcrumbCategory');
+    var kwSep = document.getElementById('breadcrumbKeywordSep');
+    var kwEl = document.getElementById('breadcrumbKeyword');
+
+    if (state.categoryId && state.categoryName) {
+      catSep.classList.remove('hidden');
+      catEl.classList.remove('hidden');
+      catEl.textContent = state.categoryName;
+    } else {
+      catSep.classList.add('hidden');
+      catEl.classList.add('hidden');
+    }
+
+    if (state.keyword) {
+      if (!state.categoryId) {
+        kwSep.classList.remove('hidden');
+      }
+      kwEl.classList.remove('hidden');
+      kwEl.textContent = '搜索: ' + state.keyword;
+    } else {
+      kwSep.classList.add('hidden');
+      kwEl.classList.add('hidden');
+    }
+  }
+
+  /* ==================== Categories ==================== */
+  function loadCategories() {
+    return api.getCategories().then(function (r) {
+      if (r.data) {
+        state.categories = flattenTree(r.data);
+        renderCategoryPills();
+        if (state.categoryId) {
+          for (var i = 0; i < state.categories.length; i++) {
+            if (String(state.categories[i].id) === String(state.categoryId)) {
+              state.categoryName = state.categories[i].name;
+              break;
+            }
+          }
+          updateBreadcrumb();
+        }
+      }
+    }).catch(function () {
+      /* categories are optional — page still works without them */
+    });
+  }
+
+  function loadBrands(categoryId) {
+    var url = '/filter/brands';
+    if (categoryId) url += '?categoryId=' + categoryId;
+    api.get(url).then(function(r) {
+      var brands = r.data || [];
+      var bar = document.getElementById('brandFilterBar');
+      var pills = document.getElementById('brandPills');
+      if (brands.length <= 1) { bar.style.display = 'none'; return; }
+      bar.style.display = '';
+      var html = '<button class="category-pill' + (!state.brand ? ' active' : '') + '" data-brand="">全部</button>';
+      brands.forEach(function(b) {
+        html += '<button class="category-pill' + (state.brand === b ? ' active' : '') + '" data-brand="' + b + '">' + b + '</button>';
+      });
+      pills.innerHTML = html;
+      pills.querySelectorAll('.category-pill').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          state.brand = this.getAttribute('data-brand');
+          state.page = 1;
+          loadBrands(state.categoryId);
+          loadProducts();
+        });
+      });
+    }).catch(function(){});
+  }
+
+  function flattenTree(nodes, result) {
+    result = result || [];
+    if (!nodes) return result;
+    for (var i = 0; i < nodes.length; i++) {
+      var node = nodes[i];
+      result.push({ id: node.id, name: node.name });
+      if (node.children && node.children.length > 0) {
+        flattenTree(node.children, result);
+      }
+    }
+    return result;
+  }
+
+  function renderCategoryPills() {
+    var container = document.getElementById('categoryPills');
+    var html = '<button class="category-pill' + (!state.categoryId ? ' active' : '') + '" data-category-id="">全部</button>';
+    for (var i = 0; i < state.categories.length; i++) {
+      var c = state.categories[i];
+      var active = String(state.categoryId) === String(c.id);
+      html += '<button class="category-pill' + (active ? ' active' : '') + '" data-category-id="' + c.id + '">' + c.name + '</button>';
+    }
+    container.innerHTML = html;
+  }
+
+  /* ==================== Sort ==================== */
+  function updateSortButtons() {
+    var buttons = document.querySelectorAll('#sortBar .category-pill[data-sort]');
+    for (var i = 0; i < buttons.length; i++) {
+      var btn = buttons[i];
+      var sortVal = btn.getAttribute('data-sort');
+      if (sortVal === state.sort) {
+        btn.classList.add('active');
+      } else {
+        btn.classList.remove('active');
+      }
+    }
+  }
+
+  /* ==================== Products ==================== */
+  function loadProducts() {
+    showLoading(false);
+    hideEmpty();
+    hideError();
+    document.getElementById('productGrid').innerHTML = renderSkeletonCards(8);
+    document.getElementById('pagination').classList.add('hidden');
+    document.getElementById('productCount').classList.add('hidden');
+
+    var params = { page: state.page, size: state.size };
+    if (state.categoryId) params.categoryId = state.categoryId;
+    if (state.sort) params.sort = state.sort;
+    if (state.brand) params.brand = state.brand;
+    if (state.priceMin) params.priceMin = state.priceMin;
+    if (state.priceMax) params.priceMax = state.priceMax;
+
+    var promise;
+    if (state.keyword) {
+      promise = api.searchProducts(state.keyword, params);
+    } else if (state.brand || state.priceMin || state.priceMax) {
+      // Use advanced filter endpoint
+      var qs = new URLSearchParams();
+      Object.entries(params).forEach(function(e) { if (e[1] != null && e[1] !== '') qs.set(e[0], e[1]); });
+      promise = api.get('/filter/products?' + qs.toString());
+    } else {
+      promise = api.getProducts(params);
+    }
+
+    return promise.then(function (r) {
+      if (r.data) {
+        state.products = r.data.records || r.data.list || [];
+        if (!state.products.length && Array.isArray(r.data)) {
+          state.products = r.data;
+        }
+        state.total = r.data.total || state.products.length;
+        state.pages = r.data.pages || Math.ceil(state.total / state.size);
+      }
+
+      if (state.products.length > 0) {
+        renderProducts();
+        renderPagination();
+        renderProductCount();
+      } else {
+        showEmpty();
+      }
+    }).catch(function (e) {
+      var msg = e.message || '网络请求失败';
+      showError('加载失败', msg);
+    }).finally(function () {
+      showLoading(false);
+    });
+  }
+
+  function renderProducts() {
+    var grid = document.getElementById('productGrid');
+    var html = '';
+    for (var i = 0; i < state.products.length; i++) {
+      var p = state.products[i];
+      var price = formatPrice(p.price != null ? p.price : p.minPrice);
+
+      var origPriceHTML = '';
+      if (p.originalPrice != null && Number(p.originalPrice) !== Number(p.price)) {
+        origPriceHTML = '<span class="original">' + formatPrice(p.originalPrice) + '</span>';
+      }
+
+      var tagHTML = '';
+      if (p.seckill) {
+        tagHTML = '<span class="card-tag seckill">秒杀</span>';
+      } else if (p.isNew) {
+        tagHTML = '<span class="card-tag new">新品</span>';
+      } else if (p.sales > 1000) {
+        tagHTML = '<span class="card-tag hot">热销</span>';
+      }
+
+      var imgHTML;
+      if (p.image) {
+        imgHTML = '<img src="' + p.image + '" alt="' + p.name + '" loading="lazy">';
+      } else {
+        imgHTML = '<span class="img-placeholder">📦</span>';
+      }
+
+      var ratingHTML = '';
+      if (p.rating != null && p.rating > 0) {
+        ratingHTML = '<span class="card-rating">' + renderStars(p.rating) + ' ' + (p.rating || '').toFixed(1) + '</span>';
+      }
+
+      var salesHTML = '';
+      if (p.sales != null && p.sales > 0) {
+        salesHTML = '<span>已售 ' + formatNumber(p.sales) + '</span>';
+      } else {
+        salesHTML = '<span>' + (p.categoryName || '') + '</span>';
+      }
+
+      html +=
+        '<div class="product-card" data-product-id="' + p.id + '">' +
+          '<label class="compare-check" onclick="event.stopPropagation()"><input type="checkbox" ' + (COMPARE.has(p.id) ? 'checked' : '') + '></label>' +
+          '<button class="card-fav' + (FAVS.isFaved(p.id) ? ' faved' : '') + '" data-pid="' + p.id + '" onclick="event.stopPropagation();FAVS.toggle(' + p.id + ');this.classList.toggle(\'faved\');this.textContent=this.classList.contains(\'faved\')?\'♥\':\'♡\'">' + (FAVS.isFaved(p.id) ? '♥' : '♡') + '</button>' +
+          '<div class="card-img">' + imgHTML + tagHTML + '<div class="qv-overlay"><span class="qv-btn" onclick="event.stopPropagation();location.href=\'/detail.html?id=' + p.id + '\'">Quick View</span></div>' + '</div>' +
+          '<div class="card-body">' +
+            '<div class="card-name">' + p.name + '</div>' +
+            '<div class="card-price-row">' +
+              '<span class="card-price">' + price + '</span>' +
+              origPriceHTML +
+            '</div>' +
+            '<div class="card-meta">' +
+              '<span>' + salesHTML + '</span>' +
+              ratingHTML +
+            '</div>' +
+          '</div>' +
+        '</div>';
+    }
+    grid.innerHTML = html;
+  }
+
+  /* ==================== Pagination ==================== */
+  function renderPagination() {
+    var container = document.getElementById('pagination');
+    if (state.pages <= 1) {
+      container.classList.add('hidden');
+      return;
+    }
+    container.classList.remove('hidden');
+
+    var pageNums = getPageNumbers(state.page, state.pages);
+    var html = '';
+
+    html += '<button data-page="' + (state.page - 1) + '"' + (state.page <= 1 ? ' disabled' : '') + '>上一页</button>';
+
+    for (var i = 0; i < pageNums.length; i++) {
+      var p = pageNums[i];
+      if (p === '...') {
+        html += '<button disabled>...</button>';
+      } else {
+        html += '<button class="' + (p === state.page ? 'active' : '') + '" data-page="' + p + '">' + p + '</button>';
+      }
+    }
+
+    html += '<button data-page="' + (state.page + 1) + '"' + (state.page >= state.pages ? ' disabled' : '') + '>下一页</button>';
+
+    container.innerHTML = html;
+  }
+
+  /* Local getPageNumbers (also exists in common.js but we ensure availability) */
+  function getPageNumbers(current, total) {
+    if (total <= 7) {
+      var result = [];
+      for (var i = 1; i <= total; i++) result.push(i);
+      return result;
+    }
+    if (current <= 4) return [1, 2, 3, 4, 5, '...', total];
+    if (current >= total - 3) return [1, '...', total - 4, total - 3, total - 2, total - 1, total];
+    return [1, '...', current - 1, current, current + 1, '...', total];
+  }
+
+  function renderProductCount() {
+    var el = document.getElementById('productCount');
+    var text = '共 <strong>' + state.total + '</strong> 件商品';
+    if (state.keyword) {
+      text += '，关键词 "<strong>' + state.keyword + '</strong>"';
+    }
+    if (state.categoryName) {
+      text += '，分类 "<strong>' + state.categoryName + '</strong>"';
+    }
+    el.innerHTML = text;
+    el.classList.remove('hidden');
+  }
+
+  /* ==================== UI Helpers ==================== */
+  function renderSkeletonCards(count) {
+    var html = '';
+    for (var i = 0; i < count; i++) {
+      html +=
+        '<div class="product-card">' +
+          '<div class="skeleton skeleton-card"></div>' +
+          '<div class="card-body">' +
+            '<div class="skeleton skeleton-text"></div>' +
+            '<div class="skeleton skeleton-text short"></div>' +
+            '<div class="skeleton skeleton-price"></div>' +
+          '</div>' +
+        '</div>';
+    }
+    return html;
+  }
+
+  function showLoading(show) {
+    document.getElementById('loadingArea').classList.toggle('hidden', !show);
+  }
+
+  function showEmpty() {
+    var el = document.getElementById('emptyState');
+    var title = document.getElementById('emptyTitle');
+    var desc = document.getElementById('emptyDesc');
+    el.classList.remove('hidden');
+    document.getElementById('productGrid').innerHTML = '';
+    document.getElementById('pagination').classList.add('hidden');
+    document.getElementById('productCount').classList.add('hidden');
+
+    if (state.keyword) {
+      title.textContent = '未找到相关商品';
+      desc.textContent = '没有找到与 "' + state.keyword + '" 相关的商品，试试其他关键词吧';
+    } else if (state.categoryId) {
+      title.textContent = '该分类下暂无商品';
+      desc.textContent = '这个分类暂时还没有商品，去看看其他分类吧';
+    } else {
+      title.textContent = '暂无商品';
+      desc.textContent = '暂时还没有上架商品，请稍后再来看看';
+    }
+  }
+
+  function hideEmpty() {
+    document.getElementById('emptyState').classList.add('hidden');
+  }
+
+  function showError(title, msg) {
+    document.getElementById('errorState').classList.remove('hidden');
+    document.getElementById('errorTitle').textContent = title;
+    document.getElementById('errorDesc').textContent = msg;
+    document.getElementById('productGrid').innerHTML = '';
+    document.getElementById('pagination').classList.add('hidden');
+    document.getElementById('productCount').classList.add('hidden');
+  }
+
+  function hideError() {
+    document.getElementById('errorState').classList.add('hidden');
+  }
+
+  /* ==================== Compare UI ==================== */
+  function updateCompareBar() {
+    var bar = document.getElementById('compareBar');
+    var text = document.getElementById('compareBarText');
+    var count = COMPARE.count();
+    if (count >= 2) {
+      bar.classList.remove('hidden');
+      text.textContent = '已选 ' + count + ' 件商品';
+    } else {
+      bar.classList.add('hidden');
+    }
+  }
+
+  function renderCompareModal() {
+    var ids = COMPARE.getAll();
+    if (ids.length < 2) return;
+
+    /* Look up product data from current page state */
+    var products = [];
+    for (var i = 0; i < ids.length; i++) {
+      for (var j = 0; j < state.products.length; j++) {
+        if (state.products[j].id === ids[i]) {
+          products.push(state.products[j]);
+          break;
+        }
+      }
+    }
+    if (products.length < 2) return;
+
+    /* Build vertical comparison table:
+       Row per attribute, first column = label, rest = values */
+    var rows = [
+      { label: '图片',   render: function(p) { return p.image ? '<img class="compare-img" src="' + p.image + '" alt="' + p.name + '">' : '<span style="font-size:2rem">📦</span>'; } },
+      { label: '名称',   render: function(p) { return p.name || '-'; } },
+      { label: '价格',   render: function(p) { return '<strong style="color:var(--danger)">' + formatPrice(p.price != null ? p.price : p.minPrice) + '</strong>'; } },
+      { label: '品牌',   render: function(p) { return p.brand || p.brandName || '-'; } },
+      { label: '销量',   render: function(p) { return (p.sales != null && p.sales > 0) ? formatNumber(p.sales) : '-'; } },
+      { label: '评分',   render: function(p) { return (p.rating != null && p.rating > 0) ? renderStars(p.rating) + ' ' + (p.rating).toFixed(1) : '-'; } },
+      { label: '分类',   render: function(p) { return p.categoryName || '-'; } }
+    ];
+
+    var html = '<thead><tr><th></th>';
+    for (var k = 0; k < products.length; k++) {
+      html += '<th>' + products[k].name + '</th>';
+    }
+    html += '</tr></thead><tbody>';
+
+    for (var r = 0; r < rows.length; r++) {
+      html += '<tr><td class="compare-label">' + rows[r].label + '</td>';
+      for (var c = 0; c < products.length; c++) {
+        html += '<td>' + rows[r].render(products[c]) + '</td>';
+      }
+      html += '</tr>';
+    }
+    html += '</tbody>';
+
+    document.getElementById('compareTable').innerHTML = html;
+    document.getElementById('compareModalOverlay').classList.add('active');
+  }
+
+  /* ==================== Events ==================== */
+  function bindEvents() {
+    /* Category pill click */
+    document.getElementById('categoryPills').addEventListener('click', function (e) {
+      var pill = e.target.closest('.category-pill');
+      if (!pill) return;
+      var categoryId = pill.getAttribute('data-category-id');
+      state.categoryId = categoryId || null;
+      state.categoryName = '';
+      state.page = 1;
+      updateURL();
+      renderCategoryPills();
+      /* Find category name */
+      if (state.categoryId) {
+        for (var i = 0; i < state.categories.length; i++) {
+          if (String(state.categories[i].id) === String(state.categoryId)) {
+            state.categoryName = state.categories[i].name;
+            break;
+          }
+        }
+      }
+      updateBreadcrumb();
+      loadBrands(state.categoryId);
+      loadProducts();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+
+    /* Price filter */
+    document.getElementById('priceFilterBtn').addEventListener('click', function() {
+      state.priceMin = document.getElementById('priceMin').value;
+      state.priceMax = document.getElementById('priceMax').value;
+      state.page = 1;
+      document.getElementById('priceClearBtn').style.display = (state.priceMin || state.priceMax) ? '' : 'none';
+      loadProducts();
+    });
+    document.getElementById('priceClearBtn').addEventListener('click', function() {
+      state.priceMin = ''; state.priceMax = '';
+      document.getElementById('priceMin').value = '';
+      document.getElementById('priceMax').value = '';
+      this.style.display = 'none';
+      state.page = 1;
+      loadProducts();
+    });
+
+    /* Sort button click */
+    document.getElementById('sortBar').addEventListener('click', function (e) {
+      var btn = e.target.closest('.category-pill[data-sort]');
+      if (!btn) return;
+      var sortVal = btn.getAttribute('data-sort');
+      state.sort = sortVal;
+      state.page = 1;
+      updateURL();
+      updateSortButtons();
+      loadProducts();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+
+    /* Pagination click */
+    document.getElementById('pagination').addEventListener('click', function (e) {
+      var btn = e.target.closest('button');
+      if (!btn || btn.disabled) return;
+      var page = parseInt(btn.getAttribute('data-page'), 10);
+      if (page >= 1 && page <= state.pages) {
+        state.page = page;
+        updateURL();
+        loadProducts();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    });
+
+    /* Product card click — navigate to detail */
+    document.getElementById('productGrid').addEventListener('click', function (e) {
+      if (e.target.closest('.compare-check')) return;
+      var card = e.target.closest('.product-card');
+      if (!card) return;
+      var id = card.getAttribute('data-product-id');
+      if (id) location.href = '/detail.html?id=' + id;
+    });
+
+    /* Retry button */
+    document.getElementById('retryBtn').addEventListener('click', function () {
+      loadProducts();
+    });
+
+    /* Popstate — browser back/forward navigation */
+    window.addEventListener('popstate', function () {
+      var cid = getQueryParam('categoryId');
+      state.categoryId = cid || null;
+      state.categoryName = '';
+      var kw = getQueryParam('keyword');
+      state.keyword = kw ? kw.trim() : '';
+      var s = getQueryParam('sort');
+      if (s === 'sales' || s === 'price_asc' || s === 'price_desc' || s === 'newest') {
+        state.sort = s;
+      } else {
+        state.sort = '';
+      }
+      var p = parseInt(getQueryParam('page'), 10);
+      state.page = (p >= 1) ? p : 1;
+
+      updateBreadcrumb();
+      updateSortButtons();
+      renderCategoryPills();
+
+      /* Find category name if needed */
+      if (state.categoryId && state.categories.length > 0) {
+        for (var i = 0; i < state.categories.length; i++) {
+          if (String(state.categories[i].id) === String(state.categoryId)) {
+            state.categoryName = state.categories[i].name;
+            break;
+          }
+        }
+      }
+      updateBreadcrumb();
+      loadProducts();
+    });
+
+    /* Breadcrumb "全部商品" click — clear filters */
+    document.getElementById('breadcrumb').addEventListener('click', function (e) {
+      var link = e.target.closest('a[href="/products.html"]');
+      if (link && (state.categoryId || state.keyword)) {
+        e.preventDefault();
+        state.categoryId = null;
+        state.keyword = '';
+        state.sort = '';
+        state.page = 1;
+        state.categoryName = '';
+        updateURL();
+        updateBreadcrumb();
+        updateSortButtons();
+        renderCategoryPills();
+        loadProducts();
+      }
+    });
+
+    /* Compare checkbox change — delegated on product grid */
+    document.getElementById('productGrid').addEventListener('change', function (e) {
+      var cb = e.target.closest('.compare-check input[type="checkbox"]');
+      if (!cb) return;
+      var card = cb.closest('.product-card');
+      if (!card) return;
+      var id = parseInt(card.getAttribute('data-product-id'), 10);
+      if (!id) return;
+      COMPARE.toggle(id);
+      updateCompareBar();
+    });
+
+    /* Compare bar — start compare */
+    document.getElementById('compareStartBtn').addEventListener('click', function () {
+      renderCompareModal();
+    });
+
+    /* Compare bar — clear */
+    document.getElementById('compareClearBtn').addEventListener('click', function () {
+      COMPARE.clear();
+      updateCompareBar();
+      /* Uncheck all visible checkboxes */
+      var checks = document.querySelectorAll('#productGrid .compare-check input[type="checkbox"]');
+      for (var i = 0; i < checks.length; i++) {
+        checks[i].checked = false;
+      }
+    });
+
+    /* Compare modal — close */
+    document.getElementById('compareModalClose').addEventListener('click', function () {
+      document.getElementById('compareModalOverlay').classList.remove('active');
+    });
+    document.getElementById('compareModalOverlay').addEventListener('click', function (e) {
+      if (e.target === this) {
+        this.classList.remove('active');
+      }
+    });
+  }
+
+})();
+</script>
+
+</body>
+</html>

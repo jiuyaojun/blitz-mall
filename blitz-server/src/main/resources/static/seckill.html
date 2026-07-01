@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>限时秒杀 — Blitz 智能商城</title>
+<link rel="stylesheet" href="/css/common.css">
+</head>
+<body>
+
+<!-- ========== Navbar ========== -->
+<nav class="blitz-navbar" id="blitz-navbar"></nav>
+
+<!-- ========== Toast Container ========== -->
+<div id="toast-container" class="toast-container"></div>
+
+<!-- ========== Main Content ========== -->
+<main class="main-content">
+
+  <!-- ===== Seckill Hero ===== -->
+  <section class="seckill-hero" id="seckillHero">
+    <div class="seckill-header">
+      <h1 class="seckill-title">⚡ 限时秒杀</h1>
+      <div class="seckill-timer" id="seckillTimer">
+        <span class="timer-block" id="timerHours">00</span>
+        <span class="timer-sep">:</span>
+        <span class="timer-block" id="timerMinutes">00</span>
+        <span class="timer-sep">:</span>
+        <span class="timer-block" id="timerSeconds">00</span>
+      </div>
+    </div>
+
+    <!-- Featured seckill product -->
+    <div class="seckill-featured" id="seckillFeatured">
+      <div class="sf-img" id="sfImg">⚡</div>
+      <div class="sf-info">
+        <div class="sf-name" id="sfName">加载中...</div>
+        <div class="sf-desc" id="sfDesc"></div>
+        <div class="sf-price" id="sfPrice">
+          ¥0.00
+          <span class="original" id="sfOriginal">¥0.00</span>
+        </div>
+        <div class="seckill-stock-info" id="sfStock">
+          剩余库存：<strong>0</strong>
+        </div>
+      </div>
+    </div>
+
+    <button class="seckill-btn" id="seckillBtn">⚡ 立即秒杀</button>
+
+    <!-- Seckill result -->
+    <div class="seckill-result hidden" id="seckillResult"></div>
+  </section>
+
+  <!-- ===== More Seckill Products ===== -->
+  <div class="section-header">
+    <h2>更多秒杀商品</h2>
+  </div>
+  <div class="product-grid" id="seckillGrid">
+    <div class="grid-full seckill-loading-wrap">
+      <div class="spinner"></div>
+      <p class="loading-text">加载秒杀商品中...</p>
+    </div>
+  </div>
+
+</main>
+
+<!-- ========== Footer ========== -->
+<footer class="blitz-footer">
+  <p>⚡ Blitz 智能商城 &copy; 2026 · 极限性能，智能体验</p>
+</footer>
+
+<script src="/js/common.js"></script>
+<script src="/js/api.js"></script>
+<script>
+/* ================================================================
+   Seckill Page — State
+   ================================================================ */
+var seckillProducts = [];
+var featuredProduct = null;
+var countdownEnd = null;
+var timerInterval = null;
+var isSeckilling = false;
+var pollAttempts = 0;
+var MAX_POLL_ATTEMPTS = 10;
+
+/* ================================================================
+   SECKILL REMINDERS — localStorage-based alert system
+   ================================================================ */
+var REMINDERS = {
+  _key: 'blitz_reminders',
+  getAll: function() { try { return JSON.parse(localStorage.getItem(this._key) || '{}'); } catch { return {}; } },
+  set: function(productId) {
+    var r = this.getAll();
+    r[productId] = Date.now();
+    localStorage.setItem(this._key, JSON.stringify(r));
+  },
+  has: function(productId) { return !!this.getAll()[productId]; },
+  checkExpired: function() {
+    var r = this.getAll();
+    var now = Date.now();
+    var triggered = [];
+    Object.keys(r).forEach(function(pid) {
+      if (now - r[pid] > 30000) { triggered.push(pid); delete r[pid]; }
+    });
+    if (triggered.length > 0) {
+      localStorage.setItem(this._key, JSON.stringify(r));
+      showToast('您关注的秒杀商品即将开抢！', 'warning');
+    }
+  }
+};
+
+/* ================================================================
+   DOM refs
+   ================================================================ */
+var $timerHours   = document.getElementById('timerHours');
+var $timerMinutes = document.getElementById('timerMinutes');
+var $timerSeconds = document.getElementById('timerSeconds');
+var $sfImg        = document.getElementById('sfImg');
+var $sfName       = document.getElementById('sfName');
+var $sfDesc       = document.getElementById('sfDesc');
+var $sfPrice      = document.getElementById('sfPrice');
+var $sfOriginal   = document.getElementById('sfOriginal');
+var $sfStock      = document.getElementById('sfStock');
+var $seckillBtn   = document.getElementById('seckillBtn');
+var $seckillResult = document.getElementById('seckillResult');
+var $seckillGrid  = document.getElementById('seckillGrid');
+
+/* ================================================================
+   Countdown Timer
+   ================================================================ */
+function pad2(n) {
+  return String(n).padStart(2, '0');
+}
+
+function updateTimer() {
+  if (!countdownEnd) return;
+  var now = Date.now();
+  var diff = Math.max(0, Math.floor((countdownEnd - now) / 1000));
+  var h = Math.floor(diff / 3600);
+  var m = Math.floor((diff % 3600) / 60);
+  var s = diff % 60;
+  $timerHours.textContent = pad2(h);
+  $timerMinutes.textContent = pad2(m);
+  $timerSeconds.textContent = pad2(s);
+  if (diff <= 0) {
+    clearInterval(timerInterval);
+    showToast('秒杀活动已结束', 'warning');
+  }
+}
+
+function startCountdown() {
+  var now = new Date();
+  countdownEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59).getTime();
+  if (countdownEnd <= Date.now()) {
+    countdownEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 23, 59, 59).getTime();
+  }
+  updateTimer();
+  timerInterval = setInterval(updateTimer, 1000);
+}
+
+/* ================================================================
+   Render
+   ================================================================ */
+function renderFeatured(product) {
+  featuredProduct = product;
+  if (product.image) {
+    $sfImg.innerHTML = '<img src="' + product.image + '" alt="' + product.name + '">';
+  } else {
+    $sfImg.innerHTML = '⚡';
+  }
+  $sfName.textContent = product.name;
+  $sfDesc.textContent = product.description || '限时特惠，手慢无！';
+  $sfPrice.innerHTML = formatPrice(product.seckillPrice) +
+    ' <span class="original">' + formatPrice(product.originalPrice) + '</span>';
+  $sfStock.innerHTML = '剩余库存：<strong>' + (product.stock || product.seckillStock || 0) + '</strong>';
+}
+
+function renderGrid(products) {
+  if (!products || products.length === 0) {
+    $seckillGrid.innerHTML = '<div class="grid-full empty-state"><div class="empty-icon">⚡</div><h3>暂无秒杀商品</h3><p>敬请期待下一场秒杀</p></div>';
+    return;
+  }
+  $seckillGrid.innerHTML = products.map(function(p) {
+    var imgHTML = p.image
+      ? '<img src="' + p.image + '" alt="' + p.name + '">'
+      : '<span class="grid-card-icon">📦</span>';
+    return '' +
+      '<div class="product-card" data-id="' + p.id + '">' +
+        '<div class="card-img">' +
+          '<span class="card-tag seckill">秒杀</span>' +
+          imgHTML +
+        '</div>' +
+        '<div class="card-body">' +
+          '<div class="card-name">' + p.name + '</div>' +
+          '<div class="card-price">' +
+            formatPrice(p.seckillPrice) +
+            '<span class="original">' + formatPrice(p.originalPrice) + '</span>' +
+          '</div>' +
+          '<div class="card-meta">' +
+            '<span>库存 ' + (p.stock || p.seckillStock || 0) + '</span>' +
+            '<span class="card-meta-hot">抢购中</span>' +
+          '</div>' +
+        '</div>' +
+        '<div class="card-actions">' +
+          '<button class="reminder-btn" data-pid="' + p.id + '">' + (REMINDERS.has(p.id) ? '✅ 已设置提醒' : '🔔 开抢提醒') + '</button>' +
+        '</div>' +
+      '</div>';
+  }).join('');
+
+  $seckillGrid.querySelectorAll('.product-card').forEach(function(card) {
+    card.addEventListener('click', function() {
+      var productId = Number(card.getAttribute('data-id'));
+      document.getElementById('seckillHero').scrollIntoView({ behavior: 'smooth' });
+      var p = seckillProducts.find(function(sp) { return sp.id === productId; });
+      if (p) { renderFeatured(p); hideResult(); }
+    });
+  });
+
+  $seckillGrid.querySelectorAll('.reminder-btn').forEach(function(btn) {
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      var productId = Number(btn.getAttribute('data-pid'));
+      if (REMINDERS.has(productId)) {
+        showToast('已经设置了提醒', 'info');
+        return;
+      }
+      REMINDERS.set(productId);
+      btn.textContent = '✅ 已设置提醒';
+      showToast('已设置开抢提醒', 'success');
+    });
+  });
+}
+
+/* ================================================================
+   Result helpers
+   ================================================================ */
+function showResult(type, msg) {
+  $seckillResult.className = 'seckill-result ' + type;
+  $seckillResult.textContent = msg;
+}
+
+function hideResult() {
+  $seckillResult.className = 'seckill-result hidden';
+}
+
+/* ================================================================
+   Seckill execution
+   ================================================================ */
+async function executeSeckill() {
+  if (isSeckilling) return;
+  if (!featuredProduct) { showToast('没有可秒杀的商品', 'warning'); return; }
+
+  if (!requireAuth()) return;
+
+  var productId = featuredProduct.id;
+  isSeckilling = true;
+  $seckillBtn.disabled = true;
+  $seckillBtn.textContent = '秒杀中...';
+  hideResult();
+
+  try {
+    var pathRes = await api.getSeckillPath(productId);
+    var path = pathRes.data;
+    if (!path) {
+      showResult('fail', '暂无秒杀活动，敬请期待');
+      resetButton();
+      return;
+    }
+
+    var execRes = await api.executeSeckill(productId, path);
+    var code = execRes.code;
+
+    if (code === 0) {
+      var orderNo = (execRes.data && execRes.data.orderNo) ? execRes.data.orderNo : '--';
+      showResult('success', '秒杀成功！订单号：' + orderNo);
+      showToast('秒杀成功！', 'success');
+      updateStockAfterSeckill(productId);
+      resetButton();
+    } else if (code === 10005 || (execRes.msg && execRes.msg.indexOf('排队') !== -1)) {
+      showResult('pending', '秒杀排队中，正在为您查询结果...');
+      pollAttempts = 0;
+      pollSeckillResult(productId);
+    } else {
+      showResult('fail', execRes.msg || '暂无秒杀活动，敬请期待');
+      resetButton();
+    }
+  } catch (e) {
+    // 404 or connection error means no active seckill backend
+    var msg = e.message || '';
+    if (msg.indexOf('Failed to fetch') !== -1 || msg.indexOf('404') !== -1 || msg.indexOf('Not Found') !== -1) {
+      showResult('fail', '暂无秒杀活动，敬请期待');
+    } else {
+      showResult('fail', msg || '暂无秒杀活动，敬请期待');
+    }
+    resetButton();
+  }
+}
+
+async function pollSeckillResult(productId) {
+  if (pollAttempts >= MAX_POLL_ATTEMPTS) {
+    showResult('fail', '暂无秒杀活动，敬请期待');
+    resetButton();
+    return;
+  }
+
+  pollAttempts++;
+  try {
+    var res = await api.getSeckillResult(productId);
+    var code = res.code;
+    if (code === 0) {
+      var orderNo = (res.data && res.data.orderNo) ? res.data.orderNo : '--';
+      showResult('success', '秒杀成功！订单号：' + orderNo);
+      showToast('秒杀成功！', 'success');
+      updateStockAfterSeckill(productId);
+      resetButton();
+    } else if (code === 10005 || (res.msg && res.msg.indexOf('排队') !== -1)) {
+      showResult('pending', '秒杀排队中...（第' + pollAttempts + '次查询）');
+      setTimeout(function() { pollSeckillResult(productId); }, 1000);
+    } else {
+      showResult('fail', res.msg || '暂无秒杀活动，敬请期待');
+      resetButton();
+    }
+  } catch (e) {
+    showResult('fail', '暂无秒杀活动，敬请期待');
+    resetButton();
+  }
+}
+
+function resetButton() {
+  isSeckilling = false;
+  $seckillBtn.disabled = false;
+  $seckillBtn.textContent = '⚡ 立即秒杀';
+}
+
+function updateStockAfterSeckill(productId) {
+  if (featuredProduct && featuredProduct.id === productId) {
+    var stock = featuredProduct.stock || featuredProduct.seckillStock || 0;
+    if (stock > 0) {
+      featuredProduct.stock = stock - 1;
+      featuredProduct.seckillStock = stock - 1;
+      $sfStock.innerHTML = '剩余库存：<strong>' + (stock - 1) + '</strong>';
+    }
+  }
+  var gp = seckillProducts.find(function(p) { return p.id === productId; });
+  if (gp) {
+    var gs = gp.stock || gp.seckillStock || 0;
+    if (gs > 0) { gp.stock = gs - 1; gp.seckillStock = gs - 1; }
+  }
+  renderGrid(seckillProducts.filter(function(p) { return p.id !== (featuredProduct && featuredProduct.id); }));
+}
+
+/* ================================================================
+   Load products & prepare seckill data
+   Priority: real seckill API → regular products fallback → empty state
+   ================================================================ */
+async function loadSeckillData() {
+  // Step 1: Try real seckill APIs first
+  var realData = await fetchRealSeckillData();
+  if (realData) {
+    seckillProducts = realData;
+    renderFeatured(seckillProducts[0]);
+    renderGrid(seckillProducts.slice(1));
+    // Set countdown to match real activity end time if available
+    if (realData._activityEnd) {
+      countdownEnd = new Date(realData._activityEnd).getTime();
+      updateTimer();
+    }
+    return;
+  }
+
+  // Step 2: Fall back to fake seckill from regular products
+  try {
+    var res = await api.getProducts({ size: 20 });
+    var products = (res.data && res.data.records) ? res.data.records : (Array.isArray(res.data) ? res.data : []);
+
+    if (products.length === 0) {
+      $seckillGrid.innerHTML = '<div class="grid-full empty-state"><div class="empty-icon">⚡</div><h3>暂无秒杀活动，敬请期待</h3><p>秒杀活动尚未开始或已结束</p></div>';
+      document.getElementById('seckillFeatured').classList.add('hidden');
+      document.getElementById('seckillTimer').style.display = 'none';
+      $seckillBtn.style.display = 'none';
+      return;
+    }
+
+    var count = Math.min(4, products.length);
+    seckillProducts = products.slice(0, count).map(function(p, idx) {
+      var originalPrice = parseFloat(p.price) || parseFloat(p.minPrice) || 99;
+      var discount = [0.5, 0.6, 0.7, 0.55][idx] || 0.7;
+      return {
+        id: p.id,
+        name: p.name,
+        description: p.description || '超值秒杀，限量抢购',
+        image: p.image || null,
+        originalPrice: originalPrice,
+        seckillPrice: Math.round(originalPrice * discount * 100) / 100,
+        stock: p.stock || Math.floor(Math.random() * 50 + 10),
+        seckillStock: p.stock || Math.floor(Math.random() * 50 + 10)
+      };
+    });
+
+    renderFeatured(seckillProducts[0]);
+    renderGrid(seckillProducts.slice(1));
+  } catch (e) {
+    $seckillGrid.innerHTML = '<div class="grid-full empty-state"><div class="empty-icon">⚡</div><h3>暂无秒杀活动，敬请期待</h3><p>秒杀活动尚未开始或已结束</p></div>';
+    document.getElementById('seckillFeatured').classList.add('hidden');
+    document.getElementById('seckillTimer').style.display = 'none';
+    $seckillBtn.style.display = 'none';
+  }
+}
+
+/**
+ * Try to fetch real seckill data from backend APIs.
+ * Returns an array of seckill product objects, or null if unavailable.
+ */
+async function fetchRealSeckillData() {
+  // Try getSeckillList first
+  try {
+    var listRes = await api.getSeckillList();
+    if (listRes && listRes.data && Array.isArray(listRes.data) && listRes.data.length > 0) {
+      return listRes.data.map(function(item) {
+        var p = item.product || item;
+        return {
+          id: item.seckillProductId || p.id,
+          name: p.name || item.name || '秒杀商品',
+          description: item.description || p.description || '限时特惠，手慢无！',
+          image: p.image || p.mainImage || item.image || null,
+          originalPrice: parseFloat(p.originalPrice || p.price || item.originalPrice || 99),
+          seckillPrice: parseFloat(item.seckillPrice || p.seckillPrice || 0),
+          stock: item.seckillStock || item.stock || p.stock || 0,
+          seckillStock: item.seckillStock || item.stock || p.stock || 0,
+          _activityEnd: item.activityEnd || item.endTime || null
+        };
+      });
+    }
+  } catch (e) {
+    // /seckill/list endpoint doesn't exist yet — expected, continue
+  }
+
+  // Try getSeckillActivities
+  try {
+    var actRes = await api.getSeckillActivities();
+    if (actRes && actRes.data && Array.isArray(actRes.data) && actRes.data.length > 0) {
+      // Find first active activity
+      var active = null;
+      for (var i = 0; i < actRes.data.length; i++) {
+        var a = actRes.data[i];
+        if (a.status === 1 || a.status === 'ACTIVE' || a.status === 'ONGOING') {
+          active = a;
+          break;
+        }
+      }
+      if (!active) active = actRes.data[0]; // fallback to first activity
+
+      if (active.products && active.products.length > 0) {
+        return active.products.map(function(item) {
+          return {
+            id: item.seckillProductId || item.id,
+            name: item.name || '秒杀商品',
+            description: item.description || '限时特惠，手慢无！',
+            image: item.image || null,
+            originalPrice: parseFloat(item.originalPrice || item.price || 99),
+            seckillPrice: parseFloat(item.seckillPrice || 0),
+            stock: item.seckillStock || item.stock || 0,
+            seckillStock: item.seckillStock || item.stock || 0,
+            _activityEnd: active.endTime || null
+          };
+        });
+      }
+    }
+  } catch (e) {
+    // /seckill/activity endpoint doesn't exist yet — expected, continue
+  }
+
+  return null;
+}
+
+/* ================================================================
+   Init
+   ================================================================ */
+document.addEventListener('DOMContentLoaded', function() {
+  renderNavbar('seckill');
+  initMobileNav('seckill');
+  startCountdown();
+  loadSeckillData();
+  REMINDERS.checkExpired();
+
+  $seckillBtn.addEventListener('click', executeSeckill);
+});
+</script>
+</body>
+</html>

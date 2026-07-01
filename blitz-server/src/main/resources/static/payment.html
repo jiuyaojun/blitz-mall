@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>支付 - Blitz</title>
+    <link rel="stylesheet" href="/css/common.css">
+</head>
+<body>
+
+    <!-- Simple header — common.css blitz-navbar is the full site navbar;
+         this page uses a minimal back-navigation header -->
+    <div style="background:#fff;border-bottom:1px solid var(--border, #e8e8e8);padding:0 16px;height:48px;display:flex;align-items:center;position:sticky;top:0;z-index:100;">
+        <a href="javascript:history.back()" style="color:var(--text, #333);text-decoration:none;font-size:15px;display:flex;align-items:center;gap:4px;">&larr; 返回</a>
+        <span style="flex:1;text-align:center;font-size:17px;font-weight:600;color:var(--text, #222);margin-right:40px;">确认支付</span>
+    </div>
+
+    <!-- Demo mode warning banner -->
+    <div style="background:linear-gradient(135deg,#FFF3CD,#FFE69C);color:#856404;text-align:center;padding:8px 16px;font-size:13px;font-weight:600;border-bottom:2px solid #FFC107;">
+        ⚠️ 演示模式 — 不会产生真实支付，请勿输入真实银行卡信息
+    </div>
+
+    <!-- Payment Card — self-centering via common.css .payment-card -->
+    <div class="payment-card" id="paymentCard">
+
+        <!-- Card body (form area) -->
+        <div id="cardBody">
+            <h2 style="font-size:19px;color:var(--text);margin-bottom:20px;" class="text-center">订单支付</h2>
+
+            <div class="flex justify-between items-center mb-16" style="background:#f9f9f9;border-radius:8px;padding:12px 16px;">
+                <span class="text-muted text-sm">订单编号</span>
+                <span class="font-bold" id="orderIdDisplay" style="word-break:break-all;">--</span>
+            </div>
+
+            <div class="pay-amount">
+                <div class="text-muted text-sm mb-4">应付金额</div>
+                <span class="unit">&yen;</span><span id="amountDisplay">0.00</span>
+            </div>
+
+            <div class="text-muted text-sm mb-8">选择支付方式</div>
+            <div class="payment-methods" id="paymentMethods">
+                <div class="payment-method selected" data-method="card">
+                    <span class="pm-icon">&#x1F4B3;</span>
+                    <span class="pm-name">银行卡</span>
+                </div>
+                <div class="payment-method" data-method="wechat">
+                    <span class="pm-icon">&#x1F49A;</span>
+                    <span class="pm-name">微信支付</span>
+                </div>
+                <div class="payment-method" data-method="alipay">
+                    <span class="pm-icon">&#x1F499;</span>
+                    <span class="pm-name">支付宝</span>
+                </div>
+            </div>
+
+            <!-- Card-specific inputs -->
+            <div id="cardInputs" style="text-align:left;">
+                <div class="form-group">
+                    <label class="form-label">卡号</label>
+                    <input class="form-input" type="text" placeholder="请输入银行卡号" maxlength="19" id="cardNumber">
+                </div>
+                <div class="flex gap-12">
+                    <div class="form-group flex-1">
+                        <label class="form-label">有效期</label>
+                        <input class="form-input" type="text" placeholder="MM/YY" maxlength="5" id="cardExpiry">
+                    </div>
+                    <div class="form-group flex-1">
+                        <label class="form-label">安全码 (CVV)</label>
+                        <input class="form-input" type="text" placeholder="CVV" maxlength="4" id="cardCvv">
+                    </div>
+                </div>
+            </div>
+
+            <!-- QR code placeholder (hidden by default) -->
+            <div id="qrPlaceholder" class="hidden" style="text-align:center;padding:30px 0;margin-bottom:20px;">
+                <div style="display:inline-block;width:180px;height:180px;background:#fafafa;border:2px dashed #ddd;border-radius:12px;line-height:180px;font-size:80px;color:#bbb;">&#x1F4F1;</div>
+                <div class="text-muted text-sm mt-12">请使用手机扫码完成支付</div>
+            </div>
+
+            <button class="btn btn-primary btn-block btn-lg" id="payBtn">确认支付</button>
+        </div>
+
+        <!-- Result area (hidden by default) -->
+        <div class="pay-result hidden" id="payResult"></div>
+
+    </div>
+
+    <script src="/js/api.js"></script>
+    <script src="/js/common.js"></script>
+    <script>
+    (function() {
+        'use strict';
+
+        // ── Parse query params ──────────────────────────────────
+        function getParam(name) {
+            var m = location.search.match(new RegExp('[?&]' + name + '=([^&]*)'));
+            return m ? decodeURIComponent(m[1]) : null;
+        }
+
+        var orderId = getParam('orderId') || getParam('orderid') || 'UNKNOWN';
+        var amount  = parseFloat(getParam('amount') || '0').toFixed(2);
+
+        // ── DOM refs ────────────────────────────────────────────
+        var orderIdDisplay = document.getElementById('orderIdDisplay');
+        var amountDisplay  = document.getElementById('amountDisplay');
+        var paymentMethods = document.getElementById('paymentMethods');
+        var cardInputs     = document.getElementById('cardInputs');
+        var qrPlaceholder  = document.getElementById('qrPlaceholder');
+        var payBtn         = document.getElementById('payBtn');
+        var cardBody       = document.getElementById('cardBody');
+        var payResult      = document.getElementById('payResult');
+        var cardNumber     = document.getElementById('cardNumber');
+        var cardExpiry     = document.getElementById('cardExpiry');
+        var cardCvv        = document.getElementById('cardCvv');
+
+        // ── Init display ────────────────────────────────────────
+        orderIdDisplay.textContent = orderId;
+        amountDisplay.textContent  = amount;
+        if (isNaN(parseFloat(amount)) || parseFloat(amount) <= 0) {
+            amountDisplay.textContent = '0.00';
+        }
+
+        // ── Payment method selection ────────────────────────────
+        var currentMethod = 'card';
+
+        paymentMethods.addEventListener('click', function(e) {
+            var methodEl = e.target.closest('.payment-method');
+            if (!methodEl) return;
+
+            var methods = paymentMethods.querySelectorAll('.payment-method');
+            for (var i = 0; i < methods.length; i++) {
+                methods[i].classList.remove('selected');
+            }
+            methodEl.classList.add('selected');
+
+            currentMethod = methodEl.getAttribute('data-method');
+
+            if (currentMethod === 'card') {
+                cardInputs.style.display = '';
+                qrPlaceholder.classList.add('hidden');
+            } else {
+                cardInputs.style.display = 'none';
+                qrPlaceholder.classList.remove('hidden');
+            }
+        });
+
+        // ── Card number formatting ──────────────────────────────
+        cardNumber.addEventListener('input', function() {
+            var val = this.value.replace(/\s/g, '').replace(/[^\d]/g, '');
+            var formatted = val.match(/.{1,4}/g);
+            this.value = formatted ? formatted.join(' ') : '';
+        });
+
+        // ── Expiry formatting ───────────────────────────────────
+        cardExpiry.addEventListener('input', function() {
+            var val = this.value.replace(/[^\d]/g, '');
+            if (val.length >= 3) {
+                val = val.slice(0,2) + '/' + val.slice(2,4);
+            }
+            this.value = val;
+        });
+
+        // ── CVV numeric only ────────────────────────────────────
+        cardCvv.addEventListener('input', function() {
+            this.value = this.value.replace(/[^\d]/g, '');
+        });
+
+        // ── Pay button handler ──────────────────────────────────
+        payBtn.addEventListener('click', function() {
+            // Disable button, show processing
+            payBtn.disabled = true;
+            payBtn.textContent = '处理中...';
+            payBtn.style.background = '#ff9800';
+
+            // Simulate network delay (1.5 - 2 seconds)
+            var delay = 1500 + Math.random() * 500;
+
+            setTimeout(function() {
+                var success = Math.random() < 0.8; // 80% success
+
+                cardBody.classList.add('hidden');
+                payBtn.style.display = 'none';
+
+                if (success) {
+                    showSuccess();
+                } else {
+                    showFailure();
+                }
+            }, delay);
+        });
+
+        // ── Success result ──────────────────────────────────────
+        function showSuccess() {
+            showConfetti();
+            payResult.classList.remove('hidden');
+            payResult.innerHTML =
+                '<div class="result-icon" style="color:#16A34A;">&#x2705;</div>' +
+                '<div class="result-title" style="color:#15803D;">支付成功</div>' +
+                '<div class="result-desc text-muted mb-16" style="line-height:1.6;">' +
+                    '订单编号：' + escHtml(orderId) + '<br>' +
+                    '支付金额：<b>&yen;' + amountDisplay.textContent + '</b>' +
+                '</div>' +
+                '<div class="flex flex-col gap-8">' +
+                    '<span class="text-muted text-sm">' +
+                        '<span id="countdownNum" style="font-weight:600;color:#DC2626;">3</span>秒后跳转到订单页' +
+                    '</span>' +
+                '</div>';
+
+            // Countdown redirect
+            var sec = 3;
+            var cdEl = document.getElementById('countdownNum');
+            var timer = setInterval(function() {
+                sec--;
+                if (sec <= 0) {
+                    clearInterval(timer);
+                    window.location.href = '/user.html';
+                } else {
+                    cdEl.textContent = sec;
+                }
+            }, 1000);
+        }
+
+        // ── Failure result ──────────────────────────────────────
+        function showFailure() {
+            payResult.classList.remove('hidden');
+            payResult.innerHTML =
+                '<div class="result-icon" style="color:#DC2626;">&#x274C;</div>' +
+                '<div class="result-title" style="color:#B91C1C;">支付失败</div>' +
+                '<div class="result-desc text-muted mb-16" style="line-height:1.6;">' +
+                    '订单编号：' + escHtml(orderId) + '<br>' +
+                    '支付金额：<b>&yen;' + amountDisplay.textContent + '</b><br>' +
+                    '支付未成功，请重试' +
+                '</div>' +
+                '<div class="flex flex-col gap-8">' +
+                    '<button class="btn btn-primary btn-block mt-16" id="retryBtn">请重试</button>' +
+                    '<a href="/user.html" class="btn btn-outline btn-block">返回订单页</a>' +
+                '</div>';
+
+            document.getElementById('retryBtn').addEventListener('click', resetForm);
+        }
+
+        // ── Reset to payment form ───────────────────────────────
+        function resetForm() {
+            cardBody.classList.remove('hidden');
+            payBtn.style.display = '';
+            payBtn.disabled = false;
+            payBtn.textContent = '确认支付';
+            payBtn.style.background = '';
+            payResult.classList.add('hidden');
+            payResult.innerHTML = '';
+        }
+
+        // ── Simple HTML escape ──────────────────────────────────
+        function escHtml(str) {
+            var d = document.createElement('div');
+            d.appendChild(document.createTextNode(str));
+            return d.innerHTML;
+        }
+
+    })();
+    </script>
+
+</body>
+</html>

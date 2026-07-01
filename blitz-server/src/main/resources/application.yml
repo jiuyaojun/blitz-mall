@@ -1,11 +1,36 @@
 server:
   port: 8080
+  # Request size limits
+  max-http-request-header-size: 8KB
+  tomcat:
+    max-http-response-header-size: 8KB
+    max-swallow-size: 2MB
 
 spring:
   application:
     name: blitz
   profiles:
-    active: dev
+    active: dev, ai
+
+# Actuator security — only expose health and info
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: when-authorized
+
+spring:
+    exclude:
+      - io.seata.spring.boot.autoconfigure.SeataAutoConfiguration
+      - io.seata.spring.boot.autoconfigure.SeataDataSourceAutoConfiguration
   threads:
     virtual:
       enabled: true
+  # Request body size limit
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB

@@ -92,8 +92,15 @@ public class ProductApplicationService {
     }
 
     public PageResult<ProductVO> listByCategory(Long categoryId, int page, int size) {
-        List<Product> products = productRepository.findByCategoryId(categoryId, page, size);
-        long total = productRepository.countByCategoryId(categoryId);
+        List<Product> products;
+        long total;
+        if (categoryId == null) {
+            products = productRepository.findAll(page, size);
+            total = productRepository.countAll();
+        } else {
+            products = productRepository.findByCategoryId(categoryId, page, size);
+            total = productRepository.countByCategoryId(categoryId);
+        }
         List<ProductVO> vos = products.stream().map(this::toVO).toList();
         return new PageResult<>(vos, total, page, size);
     }

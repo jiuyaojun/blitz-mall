@@ -10,6 +10,7 @@ import org.springframework.web.socket.server.support.HttpSessionHandshakeInterce
 @Configuration
 @EnableWebSocket
 @RequiredArgsConstructor
+@org.springframework.context.annotation.Profile("!minimal")
 public class WebSocketConfig implements WebSocketConfigurer {
 
     private final SeckillWebSocketHandler seckillWebSocketHandler;

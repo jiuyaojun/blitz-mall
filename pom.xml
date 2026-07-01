@@ -10,7 +10,7 @@
     <packaging>pom</packaging>
 
     <name>Blitz 智能商城</name>
-    <description>基于 Java 21 + Spring Boot 4.0 + Spring AI 的智能高并发电商平台</description>
+    <description>基于 Java 17 + Spring Boot + Spring AI 的智能高并发电商平台</description>
 
     <modules>
         <module>blitz-common</module>
@@ -261,7 +261,6 @@
                     <target>${java.version}</target>
                     <parameters>true</parameters>
                     <compilerArgs>
-                        <arg>--enable-preview</arg>
                     </compilerArgs>
                     <annotationProcessorPaths>
                         <path>

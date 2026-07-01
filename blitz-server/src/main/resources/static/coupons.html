@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>优惠券中心 — Blitz 智能商城</title>
+<link rel="stylesheet" href="/css/common.css">
+<style>
+/* ================================================================
+   Coupons Page - Specific styles
+   ================================================================ */
+.coupons-header {
+  text-align: center;
+  padding: 36px 16px 28px;
+}
+
+.coupons-header h1 {
+  font-size: 1.8rem;
+  margin: 0 0 8px;
+  color: var(--text, #222);
+}
+
+.coupons-header p {
+  margin: 0 0 20px;
+  color: var(--text-muted, #888);
+  font-size: 0.95rem;
+}
+
+.coupons-header .btn {
+  display: inline-block;
+  padding: 8px 20px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  text-decoration: none;
+  transition: all 0.2s;
+}
+
+.coupons-header .btn-outline {
+  border: 1.5px solid var(--primary, #e74c3c);
+  color: var(--primary, #e74c3c);
+  background: transparent;
+}
+
+.coupons-header .btn-outline:hover {
+  background: var(--primary, #e74c3c);
+  color: #fff;
+}
+
+/* Coupon grid */
+.coupons-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 16px;
+  padding: 0 16px 40px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+/* Coupon card */
+.coupon-card {
+  display: flex;
+  align-items: stretch;
+  background: linear-gradient(135deg, #fff9f0 0%, #fff 40%);
+  border-radius: 12px;
+  border: 1px solid var(--border, #eee);
+  overflow: hidden;
+  transition: transform 0.2s, box-shadow 0.2s;
+  position: relative;
+}
+
+.coupon-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(0,0,0,0.08);
+}
+
+.coupon-card.used {
+  opacity: 0.65;
+  background: #f8f8f8;
+}
+
+.coupon-card.used:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+/* Left: amount area */
+.cp-left {
+  width: 120px;
+  min-width: 120px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 16px 8px;
+  background: linear-gradient(180deg, var(--primary, #e74c3c) 0%, #d63031 100%);
+  color: #fff;
+  position: relative;
+}
+
+.coupon-card.used .cp-left {
+  background: #bbb;
+}
+
+.cp-amount {
+  font-size: 2.2rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.cp-amount .cp-unit {
+  font-size: 1rem;
+  font-weight: 600;
+  vertical-align: super;
+  margin-right: 2px;
+}
+
+.cp-tag {
+  font-size: 0.7rem;
+  background: rgba(255,255,255,0.25);
+  padding: 2px 8px;
+  border-radius: 8px;
+  margin-top: 6px;
+  white-space: nowrap;
+}
+
+/* Right: info + action */
+.cp-right {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 14px 16px;
+}
+
+.cp-name {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text, #222);
+  margin-bottom: 6px;
+}
+
+.cp-cond {
+  font-size: 0.8rem;
+  color: var(--text-muted, #888);
+  margin-bottom: 4px;
+}
+
+.cp-expire {
+  font-size: 0.75rem;
+  color: var(--text-muted, #aaa);
+}
+
+.cp-action {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  margin-top: 10px;
+}
+
+.cp-claim-btn {
+  padding: 6px 20px;
+  border-radius: 20px;
+  border: none;
+  background: var(--primary, #e74c3c);
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.15s;
+}
+
+.cp-claim-btn:hover {
+  background: #d63031;
+  transform: scale(1.03);
+}
+
+.cp-claim-btn:active {
+  transform: scale(0.97);
+}
+
+.cp-claim-btn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.cp-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 14px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  background: #e8e8e8;
+  color: #999;
+}
+
+/* Used badge overlaid on card */
+.cp-used-stamp {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: rgba(0,0,0,0.55);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 2px 10px;
+  border-radius: 10px;
+  letter-spacing: 1px;
+}
+
+/* Free coupon (minSpend=0) hint */
+.cp-free-hint {
+  font-size: 0.7rem;
+  color: var(--primary, #e74c3c);
+  margin-left: 4px;
+}
+
+/* Empty state */
+.coupons-empty {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 60px 16px;
+}
+
+.coupons-empty .empty-icon {
+  font-size: 3rem;
+  margin-bottom: 12px;
+}
+
+.coupons-empty h3 {
+  font-size: 1.2rem;
+  margin: 0 0 8px;
+  color: var(--text, #222);
+}
+
+.coupons-empty p {
+  color: var(--text-muted, #888);
+  margin: 0;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .coupons-grid {
+    grid-template-columns: 1fr;
+    padding: 0 12px 32px;
+    gap: 12px;
+  }
+
+  .cp-left {
+    width: 90px;
+    min-width: 90px;
+  }
+
+  .cp-amount {
+    font-size: 1.6rem;
+  }
+
+  .coupons-header h1 {
+    font-size: 1.4rem;
+  }
+}
+</style>
+</head>
+<body>
+
+<!-- ========== Navbar ========== -->
+<nav class="blitz-navbar" id="blitz-navbar"></nav>
+
+<!-- ========== Toast Container ========== -->
+<div id="toast-container" class="toast-container"></div>
+
+<!-- ========== Main Content ========== -->
+<main class="main-content">
+
+  <div class="coupons-header">
+    <h1>🎫 优惠券中心</h1>
+    <p>领券下单更优惠</p>
+    <a href="/user.html" class="btn btn-outline btn-sm">我的优惠券 →</a>
+  </div>
+
+  <div class="coupons-grid" id="couponsGrid">
+    <!-- Coupon cards rendered by JS -->
+  </div>
+
+</main>
+
+<!-- ========== Footer ========== -->
+<footer class="blitz-footer">
+  <p>⚡ Blitz 智能商城 &copy; 2026 · 极限性能，智能体验</p>
+</footer>
+
+<script src="/js/common.js"></script>
+<script src="/js/api.js"></script>
+<script>
+/* ================================================================
+   Coupons Center — Page Logic
+   ================================================================ */
+
+function renderCoupons() {
+  COUPONS.init();
+  var coupons = COUPONS.getAll();
+  var grid = document.getElementById('couponsGrid');
+
+  if (!coupons || coupons.length === 0) {
+    grid.innerHTML =
+      '<div class="coupons-empty">' +
+        '<div class="empty-icon">🎫</div>' +
+        '<h3>暂无可用优惠券</h3>' +
+        '<p>请关注后续活动，更多优惠即将上线</p>' +
+      '</div>';
+    return;
+  }
+
+  grid.innerHTML = coupons.map(function(c) {
+    var isUsed = c.used === true;
+    var isFree = c.minSpend === 0;
+
+    var amountHTML =
+      '<div class="cp-amount"><span class="cp-unit">¥</span>' + c.amount + '</div>';
+
+    var tagHTML = isFree
+      ? '<div class="cp-tag">无门槛</div>'
+      : '<div class="cp-tag">满' + c.minSpend + '可用</div>';
+
+    var condText = isFree
+      ? '<span class="cp-free-hint">无门槛使用</span>'
+      : '满 ' + c.minSpend + ' 元可用';
+
+    var actionHTML = isUsed
+      ? '<span class="cp-badge">✅ 已领取</span>'
+      : '<button class="cp-claim-btn" data-coupon-id="' + c.id + '">立即领取</button>';
+
+    // Used stamp overlay
+    var stampHTML = isUsed ? '<div class="cp-used-stamp">已领取</div>' : '';
+
+    return '' +
+      '<div class="coupon-card' + (isUsed ? ' used' : '') + '" data-id="' + c.id + '">' +
+        stampHTML +
+        '<div class="cp-left">' +
+          amountHTML +
+          tagHTML +
+        '</div>' +
+        '<div class="cp-right">' +
+          '<div>' +
+            '<div class="cp-name">' + c.name + '</div>' +
+            '<div class="cp-cond">' + condText + '</div>' +
+            '<div class="cp-expire">有效期至 ' + c.expire + '</div>' +
+          '</div>' +
+          '<div class="cp-action">' +
+            actionHTML +
+          '</div>' +
+        '</div>' +
+      '</div>';
+  }).join('');
+
+  // Bind claim buttons
+  grid.querySelectorAll('.cp-claim-btn').forEach(function(btn) {
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      var couponId = btn.getAttribute('data-coupon-id');
+      if (!couponId) return;
+
+      // Ensure coupons exist then mark as used
+      COUPONS.init();
+      COUPONS.use(couponId);
+      showToast('领取成功', 'success');
+
+      // Re-render to reflect the change
+      renderCoupons();
+    });
+  });
+}
+
+/* ================================================================
+   Init
+   ================================================================ */
+document.addEventListener('DOMContentLoaded', function() {
+  renderNavbar('coupons');
+  initMobileNav('coupons');
+  renderCoupons();
+});
+</script>
+</body>
+</html>

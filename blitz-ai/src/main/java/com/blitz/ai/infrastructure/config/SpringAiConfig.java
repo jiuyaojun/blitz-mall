@@ -11,6 +11,7 @@ import org.springframework.context.annotation.Configuration;
  * (OpenAiChatModel when spring.ai.openai is on the classpath).
  */
 @Configuration
+@org.springframework.context.annotation.Profile("!minimal")
 public class SpringAiConfig {
 
     @Bean

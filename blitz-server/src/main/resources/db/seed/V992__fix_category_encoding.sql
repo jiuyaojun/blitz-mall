@@ -1,0 +1,16 @@
+SET NAMES utf8mb4;
+UPDATE product_category SET name='食品生鲜',icon='🍎' WHERE id=16;
+UPDATE product_category SET name='休闲零食',icon='🍪' WHERE id=17;
+UPDATE product_category SET name='生鲜水果',icon='🍊' WHERE id=18;
+UPDATE product_category SET name='茗茶冲饮',icon='🍵' WHERE id=19;
+UPDATE product_category SET name='美妆个护',icon='💄' WHERE id=20;
+UPDATE product_category SET name='面部护肤',icon='✨' WHERE id=21;
+UPDATE product_category SET name='彩妆',icon='💋' WHERE id=22;
+UPDATE product_category SET name='个人护理',icon='🧴' WHERE id=23;
+UPDATE product_category SET name='运动户外',icon='🏃' WHERE id=24;
+UPDATE product_category SET name='运动服饰',icon='👕' WHERE id=25;
+UPDATE product_category SET name='运动鞋',icon='👟' WHERE id=26;
+UPDATE product_category SET name='户外装备',icon='⛺' WHERE id=27;
+UPDATE product_category SET name='汽车用品',icon='🚗' WHERE id=28;
+UPDATE product_category SET name='车载电器',icon='🔌' WHERE id=29;
+UPDATE product_category SET name='汽车装饰',icon='🎀' WHERE id=30;

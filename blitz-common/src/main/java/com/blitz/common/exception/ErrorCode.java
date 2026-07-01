@@ -19,6 +19,8 @@ public enum ErrorCode {
     TOKEN_EXPIRED(2002, "Token 已过期"),
     LOGIN_FAILED(2003, "用户名或密码错误"),
     ACCOUNT_DISABLED(2004, "账号已被禁用"),
+    RATE_LIMITED(2005, "请求过于频繁，请稍后再试"),
+    ACCOUNT_LOCKED(2006, "账号已被锁定，请15分钟后再试"),
 
     // Business errors 3xxx
     STOCK_INSUFFICIENT(3000, "库存不足"),

@@ -25,7 +25,8 @@ CREATE TABLE IF NOT EXISTS product (
     update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     deleted INT DEFAULT 0,
     INDEX idx_category_id (category_id),
-    INDEX idx_status (status)
+    INDEX idx_status (status),
+    INDEX idx_category_status (category_id, status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS sku (
@@ -47,8 +48,7 @@ CREATE TABLE IF NOT EXISTS sku_stock (
     lock_stock INT DEFAULT 0 COMMENT '锁定库存(秒杀预扣)',
     version INT DEFAULT 0 COMMENT '乐观锁版本号',
     create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
-    update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    INDEX idx_sku_id (sku_id)
+    update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS product_attribute (

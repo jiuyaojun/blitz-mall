@@ -18,6 +18,7 @@ import java.util.Map;
 
 @Slf4j
 @Component
+@org.springframework.context.annotation.Profile("!minimal")
 @RequiredArgsConstructor
 public class SeckillOrderConsumer {
 

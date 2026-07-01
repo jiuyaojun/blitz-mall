@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title id="pageTitle">店铺 - Blitz 智能商城</title>
+<link rel="stylesheet" href="/css/common.css">
+<style>
+/* ============================================================
+   Shop Page — Taobao-style storefront
+   ============================================================ */
+.shop-banner {
+  position: relative;
+  background: var(--accent);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  overflow: hidden;
+}
+.shop-banner-cover {
+  width: 100%;
+  height: 200px;
+  background: linear-gradient(135deg, #2C3E50 0%, #3D5166 40%, #4A6B82 70%, #5A7D96 100%);
+  position: relative;
+  overflow: hidden;
+}
+.shop-banner-cover::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -20%;
+  width: 400px;
+  height: 400px;
+  background: rgba(255,255,255,0.03);
+  border-radius: 50%;
+}
+.shop-banner-cover::after {
+  content: '';
+  position: absolute;
+  bottom: -30%;
+  left: 10%;
+  width: 200px;
+  height: 200px;
+  background: rgba(255,255,255,0.03);
+  border-radius: 50%;
+}
+.shop-header {
+  background: var(--surface);
+  padding: 0 var(--space-lg) var(--space-lg);
+  position: relative;
+}
+.shop-header-inner {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-md);
+  margin-top: -40px;
+  flex-wrap: wrap;
+}
+.shop-logo-wrap {
+  width: 88px;
+  height: 88px;
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-hover);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+  border: 3px solid var(--surface);
+}
+.shop-logo-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.shop-logo-placeholder {
+  width: 100%;
+  height: 100%;
+  background: var(--primary-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.2rem;
+  color: var(--primary);
+  font-weight: 800;
+}
+.shop-info-main {
+  flex: 1;
+  min-width: 200px;
+  padding-bottom: var(--space-sm);
+}
+.shop-info-main .shop-name {
+  font-size: var(--fs-title);
+  font-weight: 800;
+  color: var(--text);
+  margin-bottom: 4px;
+  line-height: 1.3;
+}
+.shop-info-main .shop-desc {
+  font-size: var(--fs-caption);
+  color: var(--text-muted);
+  margin-bottom: var(--space-sm);
+  line-height: 1.5;
+  max-width: 600px;
+}
+.shop-stats-row {
+  display: flex;
+  gap: var(--space-lg);
+  flex-wrap: wrap;
+}
+.shop-stat {
+  text-align: center;
+}
+.shop-stat .stat-num {
+  font-size: var(--fs-subtitle);
+  font-weight: 800;
+  color: var(--text);
+  line-height: 1.2;
+}
+.shop-stat .stat-label {
+  font-size: var(--fs-small);
+  color: var(--text-muted);
+}
+.shop-rating-stars {
+  color: var(--warning);
+  font-size: var(--fs-caption);
+  margin-right: 4px;
+}
+.shop-actions {
+  display: flex;
+  gap: var(--space-sm);
+  flex-shrink: 0;
+  align-items: flex-end;
+  padding-bottom: var(--space-sm);
+}
+
+.shop-tabs-wrap {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border-light);
+  position: sticky;
+  top: var(--navbar-height);
+  z-index: 50;
+}
+.shop-tabs {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 0 var(--space-lg);
+  display: flex;
+  gap: 0;
+}
+.shop-tab {
+  padding: 14px 24px;
+  font-size: var(--fs-body);
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: all 0.2s;
+  white-space: nowrap;
+  background: none;
+  border-top: none;
+  border-left: none;
+  border-right: none;
+  font-family: inherit;
+}
+.shop-tab:hover {
+  color: var(--primary);
+}
+.shop-tab.active {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+}
+
+.shop-content {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: var(--space-lg);
+}
+
+/* Product card extra — shop page variant */
+.product-card .card-sale-count {
+  font-size: var(--fs-small);
+  color: var(--text-muted);
+}
+.product-card .card-fav {
+  z-index: 2;
+}
+
+@media (max-width: 768px) {
+  .shop-banner-cover {
+    height: 120px;
+  }
+  .shop-header {
+    padding: 0 var(--space-md) var(--space-md);
+  }
+  .shop-header-inner {
+    margin-top: -28px;
+    gap: var(--space-sm);
+  }
+  .shop-logo-wrap {
+    width: 64px;
+    height: 64px;
+    border-radius: var(--radius-md);
+  }
+  .shop-logo-placeholder {
+    font-size: 1.6rem;
+  }
+  .shop-info-main .shop-name {
+    font-size: var(--fs-subtitle);
+  }
+  .shop-stats-row {
+    gap: var(--space-md);
+  }
+  .shop-stat .stat-num {
+    font-size: var(--fs-body);
+  }
+  .shop-actions {
+    width: 100%;
+  }
+  .shop-actions .btn {
+    flex: 1;
+    min-height: 40px;
+  }
+  .shop-tabs {
+    padding: 0 var(--space-sm);
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .shop-tab {
+    padding: 12px 16px;
+    font-size: var(--fs-caption);
+  }
+  .shop-content {
+    padding: var(--space-md) var(--space-sm);
+  }
+}
+</style>
+</head>
+<body>
+
+<nav id="blitz-navbar" class="blitz-navbar"></nav>
+
+<!-- Shop Banner -->
+<div class="shop-banner" id="shopBanner">
+  <div class="shop-banner-cover"></div>
+  <div class="shop-header">
+    <div class="shop-header-inner">
+      <div class="shop-logo-wrap" id="shopLogoWrap">
+        <div class="shop-logo-placeholder" id="shopLogoPlaceholder">🏪</div>
+      </div>
+      <div class="shop-info-main">
+        <h1 class="shop-name" id="shopName">加载中...</h1>
+        <p class="shop-desc" id="shopDesc"></p>
+        <div class="shop-stats-row">
+          <div class="shop-stat">
+            <div class="stat-num" id="shopProductCount">0</div>
+            <div class="stat-label">全部商品</div>
+          </div>
+          <div class="shop-stat">
+            <div class="stat-num" id="shopSalesCount">0</div>
+            <div class="stat-label">总销量</div>
+          </div>
+          <div class="shop-stat">
+            <div class="stat-num"><span id="shopRating">-</span></div>
+            <div class="stat-label">评分</div>
+          </div>
+        </div>
+      </div>
+      <div class="shop-actions" id="shopActions">
+        <button class="btn btn-outline btn-sm" id="btnContact" onclick="contactShop()">💬 联系客服</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Tab bar -->
+<div class="shop-tabs-wrap">
+  <div class="shop-tabs" id="shopTabs">
+    <button class="shop-tab active" data-tab="all">全部商品</button>
+    <button class="shop-tab" data-tab="new">新品</button>
+    <button class="shop-tab" data-tab="hot">热销</button>
+  </div>
+</div>
+
+<!-- Content area -->
+<div class="shop-content">
+  <!-- Product grid -->
+  <div id="productGrid" class="product-grid"></div>
+
+  <!-- Loading -->
+  <div id="loadingArea"><div class="spinner"></div></div>
+
+  <!-- Empty state -->
+  <div id="emptyState" class="empty-state hidden">
+    <div class="empty-icon">📦</div>
+    <h3 id="emptyTitle">暂无商品</h3>
+    <p id="emptyDesc">该店铺还没有上架商品，请稍后再来</p>
+    <a href="/" class="btn btn-outline mt-16">返回首页</a>
+  </div>
+
+  <!-- Error state -->
+  <div id="errorState" class="empty-state hidden">
+    <div class="empty-icon">😞</div>
+    <h3 id="errorTitle">加载失败</h3>
+    <p id="errorDesc">请检查网络连接后重试</p>
+    <button id="retryBtn" class="btn btn-primary mt-16">重新加载</button>
+  </div>
+
+  <!-- Pagination -->
+  <div id="pagination" class="pagination hidden"></div>
+</div>
+
+<footer class="blitz-footer">
+  <div class="footer-inner">
+    <div class="footer-col">
+      <h4>购物指南</h4>
+      <a href="/products.html">全部商品</a>
+      <a href="/seckill.html">秒杀专区</a>
+      <a href="/products.html?sort=newest">新品首发</a>
+    </div>
+    <div class="footer-col">
+      <h4>客户服务</h4>
+      <a href="javascript:void(0)" onclick="showToast('页面建设中','info')">帮助中心</a>
+      <a href="javascript:void(0)" onclick="showToast('页面建设中','info')">退货政策</a>
+      <a href="javascript:void(0)" onclick="showToast('页面建设中','info')">配送说明</a>
+    </div>
+    <div class="footer-col">
+      <h4>关于我们</h4>
+      <a href="javascript:void(0)" onclick="showToast('页面建设中','info')">关于 Blitz</a>
+      <a href="javascript:void(0)" onclick="showToast('页面建设中','info')">隐私政策</a>
+      <a href="javascript:void(0)" onclick="showToast('页面建设中','info')">用户协议</a>
+    </div>
+    <div class="footer-col">
+      <h4>关注我们</h4>
+      <a href="javascript:void(0)" onclick="showToast('页面建设中','info')">微信公众号</a>
+      <a href="javascript:void(0)" onclick="showToast('页面建设中','info')">新浪微博</a>
+      <a href="javascript:void(0)" onclick="showToast('页面建设中','info')">联系邮箱</a>
+    </div>
+  </div>
+  <div class="footer-bottom">&copy; 2026 Blitz 智能商城. All rights reserved.</div>
+</footer>
+
+<script src="/js/api.js"></script>
+<script src="/js/common.js"></script>
+<script>
+/* ================================================================
+   Shop Page Script
+   ================================================================ */
+(function() {
+  'use strict';
+
+  var shopId = getQueryParam('id');
+  // Fallback: shopId=1 for demo
+  if (!shopId) shopId = '1';
+  shopId = parseInt(shopId, 10);
+
+  var currentTab = 'all';
+  var currentPage = 1;
+  var pageSize = 12;
+  var shopData = null;
+
+  /* ---- Init ---- */
+  renderNavbar('shop');
+  initMobileNav('shop');
+
+  document.title = '店铺 - Blitz 智能商城';
+
+  loadShop();
+
+  /* ---- Tab switching ---- */
+  document.getElementById('shopTabs').addEventListener('click', function(e) {
+    var btn = e.target.closest('.shop-tab');
+    if (!btn) return;
+    var tab = btn.getAttribute('data-tab');
+    if (tab === currentTab) return;
+
+    // Update active tab
+    document.querySelectorAll('.shop-tab').forEach(function(t) { t.classList.remove('active'); });
+    btn.classList.add('active');
+    currentTab = tab;
+    currentPage = 1;
+    loadProducts();
+  });
+
+  /* ---- Retry ---- */
+  document.getElementById('retryBtn').addEventListener('click', function() {
+    loadShop();
+  });
+
+  /* ---- Load shop info ---- */
+  function loadShop() {
+    showLoading(true);
+    hideError();
+    hideEmpty();
+
+    api.getShopInfo(shopId).then(function(r) {
+      shopData = r.data || {};
+      renderShopHeader();
+      loadProducts();
+    }).catch(function(err) {
+      showLoading(false);
+      showError('加载店铺信息失败', (err && err.message) || '请检查网络连接后重试');
+    });
+  }
+
+  /* ---- Load products ---- */
+  function loadProducts() {
+    showLoading(true);
+    hideError();
+    hideEmpty();
+    document.getElementById('productGrid').innerHTML = '';
+    document.getElementById('pagination').classList.add('hidden');
+
+    var params = { page: currentPage, size: pageSize };
+    // Tabs: all (default), new (by createTime), hot (by saleCount)
+    if (currentTab === 'hot') {
+      params.sort = 'sales';
+    } else if (currentTab === 'new') {
+      params.sort = 'newest';
+    }
+
+    api.getShopProducts(shopId, params).then(function(r) {
+      showLoading(false);
+      var pageData = r.data || {};
+      var products = pageData.records || [];
+      var total = pageData.total || 0;
+      var pages = pageData.pages || 0;
+
+      if (products.length === 0) {
+        showEmpty();
+        return;
+      }
+
+      renderProducts(products);
+      renderPagination('pagination', currentPage, pages, function(p) {
+        currentPage = p;
+        loadProducts();
+        window.scrollTo({ top: document.getElementById('shopTabs').offsetTop - 60, behavior: 'smooth' });
+      });
+    }).catch(function(err) {
+      showLoading(false);
+      showError('加载商品失败', (err && err.message) || '请检查网络连接后重试');
+    });
+  }
+
+  /* ---- Render shop header ---- */
+  function renderShopHeader() {
+    var name = shopData.shopName || shopData.name || ('店铺 #' + shopId);
+    var desc = shopData.description || shopData.desc || '';
+    var productCount = shopData.productCount || 0;
+    var salesCount = shopData.saleCount || shopData.totalSales || 0;
+    var rating = shopData.rating;
+    var logo = shopData.logo || shopData.avatar || '';
+
+    document.title = name + ' - Blitz 智能商城';
+    document.getElementById('shopName').textContent = name;
+    document.getElementById('shopDesc').textContent = desc || '用心做好每一件商品';
+    document.getElementById('shopProductCount').textContent = formatNumber(productCount);
+    document.getElementById('shopSalesCount').textContent = formatNumber(salesCount);
+    document.getElementById('shopRating').textContent = rating != null ? Number(rating).toFixed(1) : '-';
+
+    if (logo) {
+      document.getElementById('shopLogoWrap').innerHTML = '<img src="' + escapeHtml(logo) + '" alt="' + escapeHtml(name) + '">';
+    } else {
+      document.getElementById('shopLogoPlaceholder').textContent = (name || '店').charAt(0);
+    }
+  }
+
+  /* ---- Render product cards ---- */
+  function renderProducts(products) {
+    var grid = document.getElementById('productGrid');
+    var html = '';
+    products.forEach(function(p) {
+      var imgSrc = p.mainImage || p.image || '';
+      var imgHtml = imgSrc
+        ? '<img src="' + escapeHtml(imgSrc) + '" alt="' + escapeHtml(p.name) + '" loading="lazy">'
+        : '<div class="img-placeholder">📦</div>';
+      var name = p.name || '未命名商品';
+      var price = p.price != null ? p.price : 0;
+      var saleCount = p.saleCount || 0;
+      var faved = (typeof FAVS !== 'undefined') ? FAVS.isFaved(p.id) : false;
+
+      html +=
+        '<div class="product-card" onclick="location.href=\'/detail.html?id=' + p.id + '\'">' +
+          '<div class="card-img">' +
+            imgHtml +
+            (saleCount > 100 ? '<span class="card-tag hot">热销</span>' : '') +
+            '<button class="card-fav' + (faved ? ' faved' : '') + '" onclick="event.stopPropagation();toggleFav(' + p.id + ',this)" title="收藏">' +
+              (faved ? '❤️' : '🤍') +
+            '</button>' +
+          '</div>' +
+          '<div class="card-body">' +
+            '<div class="card-name">' + escapeHtml(name) + '</div>' +
+            '<div class="card-price-row">' +
+              '<span class="card-price">' + formatPrice(price) + '</span>' +
+            '</div>' +
+            '<div class="card-meta">' +
+              '<span class="card-sale-count">已售 ' + formatNumber(saleCount) + '</span>' +
+            '</div>' +
+          '</div>' +
+        '</div>';
+    });
+    grid.innerHTML = html;
+  }
+
+  /* ---- Show / hide states ---- */
+  function showLoading(on) {
+    document.getElementById('loadingArea').style.display = on ? 'block' : 'none';
+  }
+
+  function showEmpty() {
+    document.getElementById('emptyState').classList.remove('hidden');
+  }
+
+  function hideEmpty() {
+    document.getElementById('emptyState').classList.add('hidden');
+  }
+
+  function showError(title, desc) {
+    document.getElementById('errorTitle').textContent = title || '加载失败';
+    document.getElementById('errorDesc').textContent = desc || '请检查网络连接后重试';
+    document.getElementById('errorState').classList.remove('hidden');
+  }
+
+  function hideError() {
+    document.getElementById('errorState').classList.add('hidden');
+  }
+
+  /* ---- Helpers ---- */
+  function escapeHtml(str) {
+    if (!str) return '';
+    var div = document.createElement('div');
+    div.appendChild(document.createTextNode(str));
+    return div.innerHTML;
+  }
+})();
+
+/* ---- Global: toggle favorite ---- */
+function toggleFav(productId, btnEl) {
+  if (typeof FAVS === 'undefined') return;
+  FAVS.toggle(productId);
+  var faved = FAVS.isFaved(productId);
+  btnEl.textContent = faved ? '❤️' : '🤍';
+  if (faved) {
+    btnEl.classList.add('faved');
+  } else {
+    btnEl.classList.remove('faved');
+  }
+}
+
+/* ---- Global: contact shop ---- */
+function contactShop() {
+  if (typeof AI_CHAT !== 'undefined' && AI_CHAT.open) {
+    AI_CHAT.open();
+  } else {
+    showToast('客服功能开发中，敬请期待', 'info');
+  }
+}
+</script>
+
+</body>
+</html>

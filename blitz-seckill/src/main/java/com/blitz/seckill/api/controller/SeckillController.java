@@ -16,6 +16,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/seckill")
 @RequiredArgsConstructor
+@org.springframework.context.annotation.Profile("!minimal")
 public class SeckillController {
 
     private final SeckillApplicationService seckillApplicationService;

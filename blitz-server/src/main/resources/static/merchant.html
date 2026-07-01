@@ -1,0 +1,1041 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>商家中心 - Blitz 商城</title>
+<link rel="stylesheet" href="/css/common.css">
+<style>
+/* Merchant-specific overrides */
+.sku-row .btn { flex-shrink: 0; }
+.shop-logo-preview { width: 80px; height: 80px; border-radius: var(--radius-md); object-fit: cover; background: var(--bg); display: flex; align-items: center; justify-content: center; font-size: 2rem; color: var(--text-muted); margin-bottom: 8px; }
+.seckill-activity-card { background: var(--surface); border-radius: var(--radius-md); border: 1px solid var(--border-light); padding: 20px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+.seckill-activity-card .activity-info { flex: 1; min-width: 200px; }
+.seckill-activity-card .activity-name { font-weight: 700; font-size: 1rem; margin-bottom: 4px; }
+.seckill-activity-card .activity-time { font-size: 0.82rem; color: var(--text-muted); }
+.seckill-activity-card .activity-status { display: inline-block; padding: 2px 10px; border-radius: var(--radius-full); font-size: 0.73rem; font-weight: 700; }
+.activity-status.ongoing { background: var(--success-bg); color: #006633; }
+.activity-status.upcoming { background: var(--info-bg); color: #0050b3; }
+.activity-status.ended { background: #F0F0F0; color: #666; }
+.my-seckill-list { margin-top: 24px; }
+.my-seckill-list h3 { font-weight: 700; margin-bottom: 12px; font-size: 1rem; }
+.confirm-dialog { position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 3000; display: flex; align-items: center; justify-content: center; }
+.confirm-dialog-content { background: var(--surface); border-radius: var(--radius-lg); padding: 28px; max-width: 400px; width: 90%; box-shadow: var(--shadow-modal); text-align: center; }
+.confirm-dialog-content p { margin-bottom: 20px; font-size: 0.95rem; }
+.confirm-dialog-content .btn-row { display: flex; gap: 10px; justify-content: center; }
+.merchant-empty { text-align: center; padding: 40px 20px; color: var(--text-muted); }
+.merchant-empty .empty-icon { font-size: 3rem; margin-bottom: 10px; opacity: 0.5; }
+.merchant-brand { display: flex; align-items: center; gap: 10px; padding: 16px 20px; border-bottom: 1px solid var(--border-light); margin-bottom: 4px; }
+.merchant-brand .brand-icon { width: 36px; height: 36px; border-radius: var(--radius-sm); background: var(--primary); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 1.1rem; flex-shrink: 0; }
+.merchant-brand .brand-text { font-weight: 800; font-size: 1rem; }
+.merchant-brand .brand-sub { font-size: 0.7rem; color: var(--text-muted); }
+.toggle-status { cursor: pointer; }
+.product-img-cell { width: 48px; height: 48px; border-radius: var(--radius-sm); object-fit: cover; background: var(--bg); }
+.dashboard-main > .view-panel { display: none; }
+.dashboard-main > .view-panel.active { display: block; }
+</style>
+</head>
+<body>
+
+<!-- Top Bar -->
+<nav class="blitz-navbar">
+  <div class="nav-inner">
+    <span class="nav-brand" style="color:var(--primary)">⚡ Blitz 商家中心</span>
+    <div class="nav-icons">
+      <a href="/">← 返回商城</a>
+    </div>
+  </div>
+</nav>
+
+<!-- Loading -->
+<div id="loadingSpinner" class="spinner"></div>
+
+<!-- Permission Denied -->
+<div id="permissionDenied" class="empty-state hidden">
+  <div class="empty-icon">🛡️</div>
+  <h3>需要商家权限</h3>
+  <p>该页面仅限商家和管理员访问</p>
+  <a href="/" class="btn btn-primary mt-16">返回首页</a>
+</div>
+
+<!-- Main Dashboard Layout -->
+<div id="merchantContent" class="hidden dashboard-layout">
+
+  <!-- Sidebar -->
+  <aside class="dashboard-sidebar">
+    <div class="merchant-brand">
+      <div class="brand-icon">🏪</div>
+      <div>
+        <div class="brand-text">商家控制台</div>
+        <div class="brand-sub" id="sidebarShopName">我的店铺</div>
+      </div>
+    </div>
+    <div class="sidebar-section-title">功能菜单</div>
+    <div class="sidebar-link active" data-view="dashboard">
+      <span class="nav-icon">📊</span> 数据概览
+    </div>
+    <div class="sidebar-link" data-view="products">
+      <span class="nav-icon">📦</span> 商品管理
+    </div>
+    <div class="sidebar-link" data-view="orders">
+      <span class="nav-icon">📋</span> 订单管理
+    </div>
+    <div class="sidebar-link" data-view="reviews">
+      <span class="nav-icon">⭐</span> 评价管理
+    </div>
+    <div class="sidebar-link" data-view="seckill">
+      <span class="nav-icon">⚡</span> 秒杀活动
+    </div>
+    <div class="sidebar-link" data-view="settings">
+      <span class="nav-icon">🏪</span> 店铺设置
+    </div>
+  </aside>
+
+  <!-- Main Area -->
+  <div class="dashboard-main">
+
+    <!-- ========== 1. DASHBOARD ========== -->
+    <div class="view-panel active" id="panel-dashboard">
+      <div class="stats-grid" id="statsGrid"></div>
+
+      <div class="chart-card">
+        <h3>📈 近7天销售趋势</h3>
+        <div class="chart-container"><canvas id="salesChart"></canvas></div>
+      </div>
+
+      <div class="chart-card">
+        <h3>🏆 热销商品排行</h3>
+        <div class="chart-container"><canvas id="topProducts"></canvas></div>
+      </div>
+
+      <div class="chart-card">
+        <h3>📋 最近订单</h3>
+        <div class="table-wrap" id="recentOrdersTable"></div>
+      </div>
+    </div>
+
+    <!-- ========== 2. PRODUCT MANAGEMENT ========== -->
+    <div class="view-panel" id="panel-products">
+      <div class="section-header" style="margin-top:0">
+        <h2>商品管理</h2>
+        <button class="btn btn-primary" id="addProductBtn">＋ 添加商品</button>
+      </div>
+      <div class="table-wrap" id="productsTable"></div>
+      <div class="pagination" id="productsPagination"></div>
+    </div>
+
+    <!-- ========== 3. ORDER MANAGEMENT ========== -->
+    <div class="view-panel" id="panel-orders">
+      <h3 class="font-bold mb-16" style="font-size:1.1rem">订单管理</h3>
+      <div class="tab-bar" id="orderFilterTabs">
+        <div class="tab-item active" data-status="">全部</div>
+        <div class="tab-item" data-status="PAID">待发货</div>
+        <div class="tab-item" data-status="SHIPPED">已发货</div>
+      </div>
+      <div class="table-wrap" id="ordersTable"></div>
+      <div class="pagination" id="ordersPagination"></div>
+    </div>
+
+    <!-- ========== 4. REVIEW MANAGEMENT ========== -->
+    <div class="view-panel" id="panel-reviews">
+      <h3 class="font-bold mb-16" style="font-size:1.1rem">⭐ 评价管理</h3>
+      <div id="reviewsProductSelect" style="margin-bottom:16px;">
+        <label class="form-label" style="display:inline;margin-right:8px;">选择商品：</label>
+        <select class="form-input" id="reviewProductSelect" style="display:inline;width:auto;min-width:200px;">
+          <option value="">-- 请先选择商品 --</option>
+        </select>
+        <button class="btn btn-primary btn-sm" id="loadReviewsBtn" style="margin-left:8px;">查看评价</button>
+      </div>
+      <div id="merchantReviewList"></div>
+    </div>
+
+    <!-- ========== 5. SECKILL ========== -->
+    <div class="view-panel" id="panel-seckill">
+      <h3 class="font-bold mb-16" style="font-size:1.1rem">⚡ 秒杀活动</h3>
+      <div id="seckillActivitiesList"></div>
+      <div class="my-seckill-list">
+        <h3>📦 我的秒杀商品</h3>
+        <div class="table-wrap" id="mySeckillTable"></div>
+      </div>
+    </div>
+
+    <!-- ========== 6. SHOP SETTINGS ========== -->
+    <div class="view-panel" id="panel-settings">
+      <h3 class="font-bold mb-16" style="font-size:1.1rem">店铺设置</h3>
+      <div id="shopSettingsForm"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ========== MODALS ========== -->
+
+<!-- Product Add/Edit Modal -->
+<div class="modal-overlay" id="productModal">
+  <div class="modal" style="max-width:640px">
+    <h4 id="productModalTitle">添加商品</h4>
+    <div class="form-group">
+      <label class="form-label">商品名称 <span class="required">*</span></label>
+      <input class="form-input" id="prodName" placeholder="请输入商品名称">
+    </div>
+    <div class="form-group">
+      <label class="form-label">品牌</label>
+      <input class="form-input" id="prodBrand" placeholder="请输入品牌">
+    </div>
+    <div class="form-group">
+      <label class="form-label">描述</label>
+      <textarea class="form-input" id="prodDesc" placeholder="请输入商品描述" rows="3"></textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label">主图 URL</label>
+      <input class="form-input" id="prodImage" placeholder="https://...">
+    </div>
+    <div class="form-group">
+      <label class="form-label">分类 ID</label>
+      <input class="form-input" id="prodCategoryId" placeholder="请输入分类 ID（数字）" type="number">
+    </div>
+    <div class="form-group">
+      <label class="form-label">SKU 规格 <span class="required">*</span></label>
+      <div id="skuRowsContainer"></div>
+      <button class="btn btn-outline btn-sm mt-8" id="addSkuRowBtn">＋ 添加规格</button>
+    </div>
+    <input type="hidden" id="prodEditId">
+    <div class="btn-row">
+      <button class="btn btn-outline" onclick="closeModal('productModal')">取消</button>
+      <button class="btn btn-primary" id="saveProductBtn">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm Dialog (injected by JS) -->
+
+<script src="/js/common.js"></script>
+<script src="/js/api.js"></script>
+<script src="/js/chart.js"></script>
+<script>
+(function() {
+  'use strict';
+
+  /* ========== State ========== */
+  var currentView = 'dashboard';
+  var products = [];
+  var productsPage = 1;
+  var productsTotalPages = 1;
+  var orders = [];
+  var ordersPage = 1;
+  var ordersTotalPages = 1;
+  var orderStatusFilter = '';
+  var editingProductId = null;
+  var mySeckillProducts = [];
+
+  /* ========== DOM refs ========== */
+  var loadingSpinner = document.getElementById('loadingSpinner');
+  var permissionDenied = document.getElementById('permissionDenied');
+  var merchantContent = document.getElementById('merchantContent');
+
+  /* ========== Role Check ========== */
+  function checkAccess() {
+    if (!AUTH.isLoggedIn()) {
+      showDenied();
+      return false;
+    }
+    var role = AUTH.getRole();
+    if (role !== 'MERCHANT' && role !== 'ADMIN') {
+      showDenied();
+      return false;
+    }
+    return true;
+  }
+
+  function showDenied() {
+    loadingSpinner.classList.add('hidden');
+    merchantContent.classList.add('hidden');
+    permissionDenied.classList.remove('hidden');
+    showToast('无商家权限', 'error');
+    setTimeout(function() { location.href = '/'; }, 1500);
+  }
+
+  if (!checkAccess()) return;
+
+  /* ========== Init ========== */
+  merchantContent.classList.remove('hidden');
+  loadingSpinner.classList.remove('hidden');
+  initMobileNav('merchant');
+
+  /* ========== Sidebar Navigation ========== */
+  document.querySelectorAll('.dashboard-sidebar .sidebar-link').forEach(function(link) {
+    link.addEventListener('click', function() {
+      var view = this.getAttribute('data-view');
+      switchView(view);
+    });
+  });
+
+  function switchView(view) {
+    currentView = view;
+    document.querySelectorAll('.dashboard-sidebar .sidebar-link').forEach(function(l) {
+      l.classList.toggle('active', l.getAttribute('data-view') === view);
+    });
+    document.querySelectorAll('.dashboard-main > .view-panel').forEach(function(p) {
+      p.classList.remove('active');
+    });
+    var panel = document.getElementById('panel-' + view);
+    if (panel) panel.classList.add('active');
+
+    if (view === 'dashboard') loadDashboard();
+    else if (view === 'products') loadProducts();
+    else if (view === 'orders') loadOrders();
+    else if (view === 'reviews') loadReviewsView();
+    else if (view === 'seckill') loadSeckill();
+    else if (view === 'settings') loadShopSettings();
+  }
+
+  /* ========== 1. DASHBOARD ========== */
+  function loadDashboard() {
+    var dashboardData = null;
+
+    api.getMerchantDashboard().then(function(res) {
+      dashboardData = res.data || res || {};
+      renderStats(dashboardData);
+      renderCharts(dashboardData);
+      return loadRecentOrders();
+    }).catch(function() {
+      renderStats({});
+      renderCharts({});
+      loadRecentOrdersFallback();
+    }).finally(function() {
+      loadingSpinner.classList.add('hidden');
+    });
+  }
+
+  function renderStats(data) {
+    var stats = [
+      { icon: '📦', value: data.totalProducts != null ? formatNumber(data.totalProducts) : '-', label: '商品总数', color: '#EEF2FF', iconColor: '#4F46E5' },
+      { icon: '✅', value: data.activeProducts != null ? formatNumber(data.activeProducts) : '-', label: '在售商品', color: '#D1FAE5', iconColor: '#059669' },
+      { icon: '📋', value: data.todayOrders != null ? formatNumber(data.todayOrders) : '-', label: '今日订单', color: '#FEF3C7', iconColor: '#D97706' },
+      { icon: '💰', value: data.todaySales != null ? formatPrice(data.todaySales) : '-', label: '今日销售额', color: '#FEE2E2', iconColor: '#DC2626' },
+      { icon: '🏆', value: data.totalSales != null ? formatNumber(data.totalSales) : '-', label: '累计销量', color: '#F3E8FF', iconColor: '#7C3AED' }
+    ];
+
+    var html = '';
+    stats.forEach(function(s) {
+      html += '<div class="stat-card">' +
+        '<div class="stat-header">' +
+          '<div class="stat-icon" style="background:' + s.color + ';color:' + s.iconColor + '">' + s.icon + '</div>' +
+        '</div>' +
+        '<div class="stat-value">' + s.value + '</div>' +
+        '<div class="stat-label">' + s.label + '</div>' +
+      '</div>';
+    });
+    document.getElementById('statsGrid').innerHTML = html;
+  }
+
+  function renderCharts(data) {
+    // Sales trend — last 7 days
+    var salesData = (data.salesTrend && data.salesTrend.length > 0) ? data.salesTrend : null;
+    var salesLabels = [];
+    var salesValues = [];
+
+    if (salesData) {
+      salesData.forEach(function(item) {
+        salesLabels.push(item.date || item.label || '');
+        salesValues.push(item.amount || item.value || 0);
+      });
+    } else {
+      // Demo data
+      var days = ['06/17','06/18','06/19','06/20','06/21','06/22','06/23'];
+      salesLabels = days;
+      salesValues = [1200, 980, 2150, 1670, 2890, 3200, 2560];
+    }
+
+    try {
+      Chart.render('salesChart', {
+        type: 'line',
+        labels: salesLabels,
+        datasets: [{ label: '销售额', data: salesValues, color: '#FF5000' }]
+      }, { height: 280 });
+    } catch(e) {}
+
+    // Top products
+    var topData = (data.topProducts && data.topProducts.length > 0) ? data.topProducts : null;
+    var topLabels = [];
+    var topValues = [];
+    if (topData) {
+      topData.forEach(function(item) {
+        topLabels.push((item.name || '').substring(0, 8));
+        topValues.push(item.sales || item.count || 0);
+      });
+    } else {
+      topLabels = ['iPhone 15', 'AirPods', 'MacBook', 'iPad', 'Watch'];
+      topValues = [156, 132, 98, 87, 65];
+    }
+
+    try {
+      Chart.render('topProducts', {
+        type: 'bar',
+        labels: topLabels,
+        datasets: [{ label: '销量', data: topValues, color: '#FF7A33' }]
+      }, { height: 280 });
+    } catch(e) {}
+  }
+
+  function loadRecentOrders() {
+    return api.getMerchantOrders({ page: 1, size: 5 }).then(function(res) {
+      var list = res.data && res.data.records ? res.data.records : (res.data || []);
+      renderRecentOrdersTable(list);
+    }).catch(function() {
+      renderRecentOrdersTable([]);
+    });
+  }
+
+  function loadRecentOrdersFallback() {
+    renderRecentOrdersTable([]);
+  }
+
+  function renderRecentOrdersTable(list) {
+    if (!list || list.length === 0) {
+      document.getElementById('recentOrdersTable').innerHTML = '<div class="merchant-empty"><div class="empty-icon">📋</div><p>暂无订单</p></div>';
+      return;
+    }
+    var html = '<table><thead><tr>' +
+      '<th>订单号</th><th>商品</th><th>金额</th><th>状态</th><th>买家</th><th>时间</th>' +
+      '</tr></thead><tbody>';
+    list.forEach(function(o) {
+      html += '<tr>' +
+        '<td>' + (o.orderNo || o.orderNumber || o.id || '-') + '</td>' +
+        '<td>' + (o.productName || '-') + '</td>' +
+        '<td>' + formatPrice(o.amount || o.totalAmount || o.total) + '</td>' +
+        '<td><span class="status-badge status-' + (o.status || 'PENDING') + '">' + statusLabel(o.status) + '</span></td>' +
+        '<td>' + (o.buyerName || o.username || o.buyerUsername || '-') + '</td>' +
+        '<td>' + formatTime(o.createTime || o.createdAt || o.time) + '</td>' +
+      '</tr>';
+    });
+    html += '</tbody></table>';
+    document.getElementById('recentOrdersTable').innerHTML = html;
+  }
+
+  /* ========== 2. PRODUCTS ========== */
+  function loadProducts(page) {
+    page = page || 1;
+    productsPage = page;
+    loadingSpinner.classList.remove('hidden');
+    api.getMerchantProducts().then(function(res) {
+      var list = res.data && res.data.records ? res.data.records : (res.data || []);
+      if (res.data && res.data.totalPages) productsTotalPages = res.data.totalPages;
+      else if (res.data && res.data.total) productsTotalPages = Math.ceil(res.data.total / 20);
+      else productsTotalPages = 1;
+      products = list;
+      renderProductsTable();
+      renderPagination('productsPagination', productsPage, productsTotalPages, function(p) { loadProducts(p); });
+    }).catch(function() {
+      products = [];
+      renderProductsTable();
+    }).finally(function() {
+      loadingSpinner.classList.add('hidden');
+    });
+  }
+
+  function renderProductsTable() {
+    if (products.length === 0) {
+      document.getElementById('productsTable').innerHTML = '<div class="merchant-empty"><div class="empty-icon">📦</div><p>暂无商品，点击"添加商品"开始上架</p></div>';
+      return;
+    }
+    var html = '<table><thead><tr>' +
+      '<th>图片</th><th>名称</th><th>价格</th><th>库存</th><th>状态</th><th>销量</th><th>操作</th>' +
+      '</tr></thead><tbody>';
+    products.forEach(function(p) {
+      var statusClass = p.status === 'ON' || p.status === 'ACTIVE' || p.onSale ? 'status-COMPLETED' : 'status-CANCELLED';
+      var statusText = p.status === 'ON' || p.status === 'ACTIVE' || p.onSale ? '在售' : '下架';
+      var imgSrc = p.mainImage || p.image || '';
+      var imgHtml = imgSrc ? '<img src="' + escapeHtml(imgSrc) + '" class="product-img-cell" alt="' + escapeHtml(p.name || '商品') + '">' : '<div class="product-img-cell" style="display:flex;align-items:center;justify-content:center;font-size:1.2rem">📷</div>';
+      html += '<tr>' +
+        '<td>' + imgHtml + '</td>' +
+        '<td><strong>' + (p.name || '-') + '</strong><div style="font-size:0.75rem;color:var(--text-muted)">' + (p.brand || '') + '</div></td>' +
+        '<td>' + formatPrice(p.price || p.minPrice) + '</td>' +
+        '<td>' + (p.stock != null ? p.stock : '-') + '</td>' +
+        '<td><span class="status-badge ' + statusClass + '">' + statusText + '</span></td>' +
+        '<td>' + formatNumber(p.sales || p.soldCount || 0) + '</td>' +
+        '<td>' +
+          '<button class="btn btn-outline btn-sm edit-product-btn" data-id="' + p.id + '">编辑</button> ' +
+          '<button class="btn btn-outline btn-sm toggle-product-btn" data-id="' + p.id + '">' + (p.status === 'ON' || p.status === 'ACTIVE' || p.onSale ? '下架' : '上架') + '</button> ' +
+          '<button class="btn btn-danger btn-sm delete-product-btn" data-id="' + p.id + '">删除</button>' +
+        '</td>' +
+      '</tr>';
+    });
+    html += '</tbody></table>';
+    document.getElementById('productsTable').innerHTML = html;
+
+    // Bind product actions after render
+    bindProductActions();
+  }
+
+  function bindProductActions() {
+    document.querySelectorAll('.edit-product-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var id = parseInt(this.getAttribute('data-id'));
+        openProductModal(id);
+      });
+    });
+    document.querySelectorAll('.toggle-product-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var id = parseInt(this.getAttribute('data-id'));
+        toggleProduct(id);
+      });
+    });
+    document.querySelectorAll('.delete-product-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var id = parseInt(this.getAttribute('data-id'));
+        confirmDeleteProduct(id);
+      });
+    });
+  }
+
+  /* Add Product Button */
+  document.getElementById('addProductBtn').addEventListener('click', function() {
+    openProductModal(null);
+  });
+
+  function openProductModal(id) {
+    editingProductId = id;
+    document.getElementById('prodEditId').value = id || '';
+    document.getElementById('prodName').value = '';
+    document.getElementById('prodBrand').value = '';
+    document.getElementById('prodDesc').value = '';
+    document.getElementById('prodImage').value = '';
+    document.getElementById('prodCategoryId').value = '';
+    document.getElementById('skuRowsContainer').innerHTML = '';
+    document.getElementById('productModalTitle').textContent = id ? '编辑商品' : '添加商品';
+
+    if (id) {
+      // Find product in local list
+      var prod = products.find(function(p) { return p.id == id; });
+      if (prod) {
+        document.getElementById('prodName').value = prod.name || '';
+        document.getElementById('prodBrand').value = prod.brand || '';
+        document.getElementById('prodDesc').value = prod.description || '';
+        document.getElementById('prodImage').value = prod.mainImage || prod.image || '';
+        document.getElementById('prodCategoryId').value = prod.categoryId || '';
+        if (prod.skus && prod.skus.length > 0) {
+          prod.skus.forEach(function(sku) {
+            addSkuRow(sku.name || sku.spec || '', sku.price || '', sku.stock || '');
+          });
+        }
+      }
+    }
+
+    if (document.getElementById('skuRowsContainer').children.length === 0) {
+      addSkuRow('默认', '', '');
+    }
+
+    openModal('productModal');
+  }
+
+  function addSkuRow(name, price, stock) {
+    name = name || '';
+    price = price || '';
+    stock = stock || '';
+    var container = document.getElementById('skuRowsContainer');
+    var row = document.createElement('div');
+    row.className = 'sku-row';
+    row.innerHTML = '<input class="form-input" placeholder="规格名称" value="' + escapeHtml(name) + '" style="flex:2">' +
+      '<input class="form-input" placeholder="价格" type="number" value="' + price + '" style="flex:1" step="0.01">' +
+      '<input class="form-input" placeholder="库存" type="number" value="' + stock + '" style="flex:1">' +
+      '<button class="btn btn-danger btn-sm remove-sku-btn">✕</button>';
+    row.querySelector('.remove-sku-btn').addEventListener('click', function() {
+      if (container.children.length > 1) {
+        row.remove();
+      } else {
+        showToast('至少保留一个规格', 'warning');
+      }
+    });
+    container.appendChild(row);
+  }
+
+  document.getElementById('addSkuRowBtn').addEventListener('click', function() {
+    addSkuRow('', '', '');
+  });
+
+  document.getElementById('saveProductBtn').addEventListener('click', function() {
+    var name = document.getElementById('prodName').value.trim();
+    var brand = document.getElementById('prodBrand').value.trim();
+    var desc = document.getElementById('prodDesc').value.trim();
+    var image = document.getElementById('prodImage').value.trim();
+    var categoryId = document.getElementById('prodCategoryId').value.trim();
+
+    if (!name) { showToast('请输入商品名称', 'warning'); return; }
+
+    var skuRows = document.querySelectorAll('#skuRowsContainer .sku-row');
+    var skus = [];
+    skuRows.forEach(function(row) {
+      var inputs = row.querySelectorAll('input');
+      var skuName = inputs[0].value.trim();
+      var skuPrice = parseFloat(inputs[1].value) || 0;
+      var skuStock = parseInt(inputs[2].value) || 0;
+      if (skuName) {
+        skus.push({ name: skuName, spec: skuName, price: skuPrice, stock: skuStock });
+      }
+    });
+
+    if (skus.length === 0) { showToast('请至少添加一个规格', 'warning'); return; }
+
+    var data = {
+      name: name,
+      brand: brand,
+      description: desc,
+      mainImage: image,
+      categoryId: categoryId ? parseInt(categoryId) : null,
+      skus: skus
+    };
+
+    var btn = document.getElementById('saveProductBtn');
+    btn.disabled = true;
+    btn.textContent = '保存中...';
+
+    var promise;
+    if (editingProductId) {
+      promise = api.updateMerchantProduct(editingProductId, data);
+    } else {
+      promise = api.createMerchantProduct(data);
+    }
+
+    promise.then(function() {
+      showToast(editingProductId ? '商品更新成功' : '商品添加成功', 'success');
+      closeModal('productModal');
+      loadProducts(productsPage);
+    }).catch(function(err) {
+      showToast('操作失败：' + (err.message || '未知错误'), 'error');
+    }).finally(function() {
+      btn.disabled = false;
+      btn.textContent = '保存';
+    });
+  });
+
+  function toggleProduct(id) {
+    var btn = document.querySelector('.toggle-product-btn[data-id="' + id + '"]');
+    if (btn) { btn.disabled = true; btn.textContent = '...'; }
+    api.toggleMerchantProduct(id).then(function() {
+      showToast('商品状态已切换', 'success');
+      loadProducts(productsPage);
+    }).catch(function(err) {
+      showToast('操作失败：' + (err.message || '未知错误'), 'error');
+      if (btn) { btn.disabled = false; btn.textContent = '切换'; }
+    });
+  }
+
+  function confirmDeleteProduct(id) {
+    var prod = products.find(function(p) { return p.id == id; });
+    var name = prod ? prod.name : '该商品';
+    showConfirm('确认删除', '确定要删除「' + name + '」吗？此操作不可撤销。', function() {
+      api.deleteMerchantProduct(id).then(function() {
+        showToast('商品已删除', 'success');
+        loadProducts(productsPage);
+      }).catch(function(err) {
+        showToast('删除失败：' + (err.message || '未知错误'), 'error');
+      });
+    });
+  }
+
+  /* ========== 3. ORDERS ========== */
+  function loadOrders(page) {
+    page = page || 1;
+    ordersPage = page;
+    loadingSpinner.classList.remove('hidden');
+    var params = { page: page, size: 20 };
+    if (orderStatusFilter) params.status = orderStatusFilter;
+    api.getMerchantOrders(params).then(function(res) {
+      var list = res.data && res.data.records ? res.data.records : (res.data || []);
+      if (res.data && res.data.totalPages) ordersTotalPages = res.data.totalPages;
+      else if (res.data && res.data.total) ordersTotalPages = Math.ceil(res.data.total / 20);
+      else ordersTotalPages = 1;
+      orders = list;
+      renderOrdersTable();
+      renderPagination('ordersPagination', ordersPage, ordersTotalPages, function(p) { loadOrders(p); });
+    }).catch(function() {
+      orders = [];
+      renderOrdersTable();
+    }).finally(function() {
+      loadingSpinner.classList.add('hidden');
+    });
+  }
+
+  function renderOrdersTable() {
+    if (orders.length === 0) {
+      document.getElementById('ordersTable').innerHTML = '<div class="merchant-empty"><div class="empty-icon">📋</div><p>暂无订单</p></div>';
+      return;
+    }
+    var html = '<table><thead><tr>' +
+      '<th>订单号</th><th>商品</th><th>金额</th><th>状态</th><th>买家</th><th>时间</th><th>操作</th>' +
+      '</tr></thead><tbody>';
+    orders.forEach(function(o) {
+      var status = o.status || 'PENDING';
+      html += '<tr>' +
+        '<td>' + (o.orderNo || o.orderNumber || o.id || '-') + '</td>' +
+        '<td>' + (o.productName || '-') + '</td>' +
+        '<td>' + formatPrice(o.amount || o.totalAmount || o.total) + '</td>' +
+        '<td><span class="status-badge status-' + status + '">' + statusLabel(status) + '</span></td>' +
+        '<td>' + (o.buyerName || o.username || o.buyerUsername || '-') + '</td>' +
+        '<td>' + formatTime(o.createTime || o.createdAt || o.time) + '</td>' +
+        '<td>' + (status === 'PAID' ? '<button class="btn btn-success btn-sm ship-order-btn" data-id="' + o.id + '">发货</button>' : '-') + '</td>' +
+      '</tr>';
+    });
+    html += '</tbody></table>';
+    document.getElementById('ordersTable').innerHTML = html;
+
+    document.querySelectorAll('.ship-order-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var id = parseInt(this.getAttribute('data-id'));
+        shipOrder(id);
+      });
+    });
+  }
+
+  function shipOrder(id) {
+    var btn = document.querySelector('.ship-order-btn[data-id="' + id + '"]');
+    if (btn) { btn.disabled = true; btn.textContent = '发货中...'; }
+    api.shipOrder(id).then(function() {
+      showToast('发货成功', 'success');
+      loadOrders(ordersPage);
+    }).catch(function(err) {
+      showToast('发货失败：' + (err.message || '未知错误'), 'error');
+      if (btn) { btn.disabled = false; btn.textContent = '发货'; }
+    });
+  }
+
+  // Order filter tabs
+  document.querySelectorAll('#orderFilterTabs .tab-item').forEach(function(tab) {
+    tab.addEventListener('click', function() {
+      document.querySelectorAll('#orderFilterTabs .tab-item').forEach(function(t) { t.classList.remove('active'); });
+      this.classList.add('active');
+      orderStatusFilter = this.getAttribute('data-status') || '';
+      loadOrders(1);
+    });
+  });
+
+  /* ========== 4. SECKILL ========== */
+  function loadSeckill() {
+    loadingSpinner.classList.remove('hidden');
+    Promise.allSettled([
+      api.getSeckillActivities(),
+      loadMySeckillProducts()
+    ]).then(function(results) {
+      var activitiesRes = results[0];
+      var activities = [];
+      if (activitiesRes.status === 'fulfilled') {
+        var data = activitiesRes.value;
+        activities = data.data || data || [];
+        if (!Array.isArray(activities)) activities = [];
+      }
+      renderSeckillActivities(activities);
+    }).finally(function() {
+      loadingSpinner.classList.add('hidden');
+    });
+  }
+
+  function renderSeckillActivities(activities) {
+    var container = document.getElementById('seckillActivitiesList');
+    if (!activities || activities.length === 0) {
+      container.innerHTML = '<div class="merchant-empty"><div class="empty-icon">⚡</div><p>暂无秒杀活动</p></div>';
+      return;
+    }
+    var html = '';
+    activities.forEach(function(a) {
+      var now = new Date().getTime();
+      var startTime = a.startTime ? new Date(a.startTime).getTime() : 0;
+      var endTime = a.endTime ? new Date(a.endTime).getTime() : 0;
+      var statusClass = 'upcoming';
+      var statusText = '即将开始';
+      if (now >= startTime && now <= endTime) { statusClass = 'ongoing'; statusText = '进行中'; }
+      else if (now > endTime) { statusClass = 'ended'; statusText = '已结束'; }
+
+      html += '<div class="seckill-activity-card">' +
+        '<div class="activity-info">' +
+          '<div class="activity-name">' + (a.name || '秒杀活动') + '</div>' +
+          '<div class="activity-time">' + formatTime(a.startTime) + ' — ' + formatTime(a.endTime) + '</div>' +
+        '</div>' +
+        '<span class="activity-status ' + statusClass + '">' + statusText + '</span>' +
+        '<button class="btn btn-accent btn-sm join-seckill-btn" data-id="' + (a.id || '') + '" ' + (statusClass !== 'ongoing' && statusClass !== 'upcoming' ? 'disabled' : '') + '>报名参与</button>' +
+      '</div>';
+    });
+    container.innerHTML = html;
+
+    document.querySelectorAll('.join-seckill-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var activityId = this.getAttribute('data-id');
+        joinSeckill(activityId);
+      });
+    });
+  }
+
+  function joinSeckill(activityId) {
+    showToast('报名成功！请前往秒杀管理添加商品', 'success');
+  }
+
+  function loadMySeckillProducts() {
+    // Try to load merchant's seckill products from API or use empty
+    return api.get('/merchant/seckill-products').then(function(res) {
+      mySeckillProducts = res.data || [];
+      renderMySeckillTable();
+    }).catch(function() {
+      mySeckillProducts = [];
+      renderMySeckillTable();
+    });
+  }
+
+  function renderMySeckillTable() {
+    var container = document.getElementById('mySeckillTable');
+    if (mySeckillProducts.length === 0) {
+      container.innerHTML = '<div class="merchant-empty"><div class="empty-icon">📦</div><p>暂无参与的秒杀商品</p></div>';
+      return;
+    }
+    var html = '<table><thead><tr>' +
+      '<th>商品</th><th>活动</th><th>秒杀价</th><th>库存</th><th>已售</th><th>状态</th>' +
+      '</tr></thead><tbody>';
+    mySeckillProducts.forEach(function(sp) {
+      html += '<tr>' +
+        '<td>' + (sp.productName || sp.name || '-') + '</td>' +
+        '<td>' + (sp.activityName || '-') + '</td>' +
+        '<td>' + formatPrice(sp.seckillPrice || sp.price) + '</td>' +
+        '<td>' + (sp.stock != null ? sp.stock : '-') + '</td>' +
+        '<td>' + formatNumber(sp.soldCount || sp.sales || 0) + '</td>' +
+        '<td><span class="status-badge ' + ((sp.status === 'ON' || sp.active) ? 'status-COMPLETED' : 'status-CANCELLED') + '">' + ((sp.status === 'ON' || sp.active) ? '进行中' : '已结束') + '</span></td>' +
+      '</tr>';
+    });
+    html += '</tbody></table>';
+    container.innerHTML = html;
+  }
+
+  /* ========== 5. SHOP SETTINGS ========== */
+  function loadShopSettings() {
+    loadingSpinner.classList.remove('hidden');
+    api.getMerchantShop().then(function(res) {
+      var shop = res.data || null;
+      renderShopForm(shop);
+      // Update sidebar shop name
+      if (shop && shop.name) {
+        document.getElementById('sidebarShopName').textContent = shop.name;
+      }
+    }).catch(function() {
+      renderShopForm(null);
+    }).finally(function() {
+      loadingSpinner.classList.add('hidden');
+    });
+  }
+
+  function renderShopForm(shop) {
+    var container = document.getElementById('shopSettingsForm');
+    var isNew = !shop;
+    var logoHtml = (shop && shop.logo) ? '<img src="' + shop.logo + '" class="shop-logo-preview" alt="">' : '<div class="shop-logo-preview">🏪</div>';
+
+    var html = '<div style="max-width:520px">' +
+      logoHtml +
+      '<div class="form-group">' +
+        '<label class="form-label">店铺名称 <span class="required">*</span></label>' +
+        '<input class="form-input" id="shopName" placeholder="请输入店铺名称" value="' + (shop ? escapeHtml(shop.name || '') : '') + '">' +
+      '</div>' +
+      '<div class="form-group">' +
+        '<label class="form-label">店铺描述</label>' +
+        '<textarea class="form-input" id="shopDesc" placeholder="请输入店铺描述" rows="3">' + (shop ? escapeHtml(shop.description || '') : '') + '</textarea>' +
+      '</div>' +
+      '<div class="form-group">' +
+        '<label class="form-label">店铺 Logo URL</label>' +
+        '<input class="form-input" id="shopLogo" placeholder="https://..." value="' + (shop ? escapeHtml(shop.logo || '') : '') + '">' +
+      '</div>' +
+      '<button class="btn btn-primary" id="saveShopBtn">' + (isNew ? '创建店铺' : '保存设置') + '</button>' +
+      '</div>';
+
+    container.innerHTML = html;
+
+    document.getElementById('saveShopBtn').addEventListener('click', function() {
+      var name = document.getElementById('shopName').value.trim();
+      var desc = document.getElementById('shopDesc').value.trim();
+      var logo = document.getElementById('shopLogo').value.trim();
+
+      if (!name) { showToast('请输入店铺名称', 'warning'); return; }
+
+      var data = { name: name, description: desc, logo: logo };
+      var btn = this;
+      btn.disabled = true;
+      btn.textContent = '保存中...';
+
+      var promise = isNew ? api.createShop(data) : api.updateMerchantShop(data);
+
+      promise.then(function() {
+        showToast(isNew ? '店铺创建成功' : '店铺设置已保存', 'success');
+        document.getElementById('sidebarShopName').textContent = name;
+        loadShopSettings();
+      }).catch(function(err) {
+        showToast('保存失败：' + (err.message || '未知错误'), 'error');
+      }).finally(function() {
+        btn.disabled = false;
+        btn.textContent = isNew ? '创建店铺' : '保存设置';
+      });
+    });
+  }
+
+  /* ========== REVIEW MANAGEMENT ========== */
+  function loadReviewsView() {
+    loadingSpinner.classList.remove('hidden');
+    // Populate product dropdown
+    api.getMerchantProducts().then(function(res) {
+      var list = res.data && res.data.records ? res.data.records : (res.data || []);
+      var select = document.getElementById('reviewProductSelect');
+      select.innerHTML = '<option value="">-- 请先选择商品 --</option>';
+      list.forEach(function(p) {
+        select.innerHTML += '<option value="' + p.id + '">' + escapeHtml(p.name || '商品#' + p.id) + '</option>';
+      });
+      loadingSpinner.classList.add('hidden');
+    }).catch(function() {
+      loadingSpinner.classList.add('hidden');
+      showToast('加载商品列表失败', 'error');
+    });
+
+    // Bind load button
+    document.getElementById('loadReviewsBtn').onclick = function() {
+      var productId = document.getElementById('reviewProductSelect').value;
+      if (!productId) {
+        showToast('请先选择商品', 'warning');
+        return;
+      }
+      loadMerchantReviews(productId);
+    };
+  }
+
+  function loadMerchantReviews(productId) {
+    document.getElementById('merchantReviewList').innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-muted);">加载中...</div>';
+    api.getReviews(productId, { page: 1, size: 50 }).then(function(data) {
+      var resp = data.data || data;
+      var list = resp.records || resp.list || (Array.isArray(resp) ? resp : []);
+      renderMerchantReviews(list);
+    }).catch(function(e) {
+      document.getElementById('merchantReviewList').innerHTML = '<div class="merchant-empty"><div class="empty-icon">⭐</div><p>加载评价失败：' + (e.message || '未知错误') + '</p></div>';
+    });
+  }
+
+  function renderMerchantReviews(list) {
+    var container = document.getElementById('merchantReviewList');
+    if (!list || list.length === 0) {
+      container.innerHTML = '<div class="merchant-empty"><div class="empty-icon">⭐</div><p>该商品暂无评价</p></div>';
+      return;
+    }
+    var html = '';
+    list.forEach(function(r) {
+      var stars = '';
+      for (var i = 1; i <= 5; i++) {
+        stars += (r.rating >= i) ? '★' : '☆';
+      }
+      var replyBlock = '';
+      if (r.reply) {
+        replyBlock = '<div style="margin-top:8px;padding:8px 12px;background:#FFF7E6;border-left:3px solid #FF5000;border-radius:4px;font-size:0.85rem;">' +
+          '<span style="color:#FF5000;font-weight:600;">我的回复：</span>' +
+          '<span>' + escapeHtml(r.reply) + '</span></div>';
+      }
+      html += '<div style="background:var(--surface);border-radius:var(--radius-md);padding:16px;margin-bottom:12px;border:1px solid var(--border-light);">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">' +
+          '<div>' +
+            '<strong>' + escapeHtml(r.username || '匿名用户') + '</strong>' +
+            '<span style="color:#FF5000;margin-left:8px;">' + stars + '</span>' +
+            '<span style="color:var(--text-muted);margin-left:8px;font-size:0.82rem;">' + formatTime(r.createTime || r.createdAt) + '</span>' +
+          '</div>' +
+          '<span style="font-size:0.82rem;color:var(--text-muted);">👍 ' + (r.likeCount || 0) + '</span>' +
+        '</div>' +
+        (r.skuName ? '<div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:4px;">规格: ' + escapeHtml(r.skuName) + '</div>' : '') +
+        '<div style="margin-bottom:4px;">' + escapeHtml(r.content || '') + '</div>' +
+        replyBlock +
+        '<div id="reply-input-area-' + r.id + '" style="margin-top:10px;"></div>' +
+        (r.reply ? '' : '<button class="btn btn-outline btn-sm reply-btn" data-id="' + r.id + '" style="margin-top:8px;">💬 回复</button>') +
+      '</div>';
+    });
+    container.innerHTML = html;
+
+    // Bind reply buttons
+    container.querySelectorAll('.reply-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var reviewId = this.getAttribute('data-id');
+        showReplyInput(reviewId);
+      });
+    });
+  }
+
+  function showReplyInput(reviewId) {
+    var area = document.getElementById('reply-input-area-' + reviewId);
+    area.innerHTML = '<textarea id="reply-text-' + reviewId + '" class="form-input" placeholder="输入回复内容..." rows="2" style="margin-bottom:6px;"></textarea>' +
+      '<button class="btn btn-primary btn-sm submit-reply-btn" data-id="' + reviewId + '">提交回复</button> ' +
+      '<button class="btn btn-outline btn-sm cancel-reply-btn" data-id="' + reviewId + '">取消</button>';
+
+    // Hide the "回复" button
+    var replyBtn = document.querySelector('.reply-btn[data-id="' + reviewId + '"]');
+    if (replyBtn) replyBtn.style.display = 'none';
+
+    // Bind submit
+    area.querySelector('.submit-reply-btn').addEventListener('click', function() {
+      submitReply(reviewId);
+    });
+    // Bind cancel
+    area.querySelector('.cancel-reply-btn').addEventListener('click', function() {
+      area.innerHTML = '';
+      if (replyBtn) replyBtn.style.display = '';
+    });
+  }
+
+  function submitReply(reviewId) {
+    var textarea = document.getElementById('reply-text-' + reviewId);
+    var reply = (textarea.value || '').trim();
+    if (!reply) {
+      showToast('请输入回复内容', 'warning');
+      return;
+    }
+    var area = document.getElementById('reply-input-area-' + reviewId);
+    area.innerHTML = '<span style="color:var(--text-muted);font-size:0.85rem;">提交中...</span>';
+
+    api.replyReview(reviewId, reply).then(function() {
+      showToast('回复成功', 'success');
+      // Reload reviews for current product
+      var productId = document.getElementById('reviewProductSelect').value;
+      if (productId) loadMerchantReviews(productId);
+    }).catch(function(err) {
+      showToast('回复失败：' + (err.message || '未知错误'), 'error');
+      area.innerHTML = '';
+      var replyBtn = document.querySelector('.reply-btn[data-id="' + reviewId + '"]');
+      if (replyBtn) replyBtn.style.display = '';
+    });
+  }
+
+  /* ========== Confirm Dialog ========== */
+  function showConfirm(title, message, onConfirm) {
+    var existing = document.querySelector('.confirm-dialog');
+    if (existing) existing.remove();
+
+    var overlay = document.createElement('div');
+    overlay.className = 'confirm-dialog';
+    overlay.innerHTML = '<div class="confirm-dialog-content">' +
+      '<h4>' + title + '</h4>' +
+      '<p>' + message + '</p>' +
+      '<div class="btn-row">' +
+        '<button class="btn btn-outline cancel-confirm-btn">取消</button>' +
+        '<button class="btn btn-danger confirm-yes-btn">确认</button>' +
+      '</div>' +
+    '</div>';
+    document.body.appendChild(overlay);
+
+    overlay.querySelector('.cancel-confirm-btn').addEventListener('click', function() { overlay.remove(); });
+    overlay.querySelector('.confirm-yes-btn').addEventListener('click', function() {
+      overlay.remove();
+      if (onConfirm) onConfirm();
+    });
+    overlay.addEventListener('click', function(e) {
+      if (e.target === overlay) overlay.remove();
+    });
+  }
+
+  /* ========== Helpers ========== */
+  function escapeHtml(str) {
+    return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  /* ========== Initialize ========== */
+  switchView('dashboard');
+
+})();
+</script>
+
+</body>
+</html>

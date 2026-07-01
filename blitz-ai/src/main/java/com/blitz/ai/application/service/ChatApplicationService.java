@@ -18,6 +18,7 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@org.springframework.context.annotation.Profile("!minimal")
 public class ChatApplicationService {
 
     private final ChatSessionRepository sessionRepository;

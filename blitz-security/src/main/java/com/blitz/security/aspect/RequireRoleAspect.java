@@ -18,8 +18,20 @@ public class RequireRoleAspect {
 
     private final HttpServletRequest request;
 
+    /** Intercept methods annotated with @RequireRole */
     @Before("@annotation(requireRole)")
-    public void checkRole(RequireRole requireRole) {
+    public void checkMethodRole(RequireRole requireRole) {
+        check(requireRole);
+    }
+
+    /** Intercept classes annotated with @RequireRole (fallback for methods without own annotation) */
+    @Before("@within(requireRole) && !@annotation(com.blitz.security.annotation.RequireRole)")
+    public void checkClassRole(RequireRole requireRole) {
+        check(requireRole);
+    }
+
+    private void check(RequireRole requireRole) {
+        if (requireRole == null) return;
         String role = (String) request.getAttribute("role");
         if (role == null) {
             throw new BusinessException(ErrorCode.UNAUTHORIZED);

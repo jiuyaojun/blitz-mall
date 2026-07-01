@@ -20,6 +20,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @Slf4j
 @Component
 @RequiredArgsConstructor
+@org.springframework.context.annotation.Profile("!minimal")
 public class SeckillStockRedisService {
 
     private final RedissonClient redissonClient;

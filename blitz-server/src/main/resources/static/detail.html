@@ -1,0 +1,1089 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>商品详情 - Blitz 智能商城</title>
+<link rel="stylesheet" href="/css/common.css">
+<style>
+/* ===== Page-specific styles (not in common.css) ===== */
+
+/* Seckill banner — dark solid bg, inline bar */
+.seckill-banner {
+  background: #1E1B2E; color: #fff;
+  padding: 12px var(--space-lg); margin-bottom: var(--space-md);
+  display: flex; align-items: center; justify-content: space-between;
+  font-weight: 600; flex-wrap: wrap; gap: var(--space-sm);
+}
+.seckill-countdown {
+  font-size: 20px; font-variant-numeric: tabular-nums; letter-spacing: 2px;
+}
+.seckill-countdown .seg {
+  background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 4px; margin: 0 2px;
+}
+
+/* Trust badges */
+.trust-badges {
+  display: flex; gap: 12px; flex-wrap: wrap;
+  margin-top: 12px; padding: 12px 0;
+  border-top: 1px solid var(--border-light, #f0f0f0);
+}
+.trust-badge {
+  display: flex; align-items: center; gap: 4px;
+  font-size: 0.78rem; color: var(--text-secondary);
+  background: var(--surface, #fafafa);
+  padding: 6px 12px; border-radius: var(--radius-sm, 6px);
+}
+
+/* Stock indicator */
+.detail-stock {
+  font-size: var(--fs-caption); color: var(--text-secondary); white-space: nowrap;
+}
+.detail-stock.out { color: var(--danger); }
+
+/* Like button */
+.btn-like {
+  background: none; border: none; cursor: pointer; color: var(--text-muted);
+  font-size: var(--fs-caption); padding: 4px 8px;
+  display: flex; align-items: center; gap: 4px;
+  transition: color 0.15s; border-radius: var(--radius-sm);
+}
+.btn-like:hover { color: var(--primary); background: var(--primary-bg); }
+.btn-like.liked { color: var(--primary); }
+
+/* Load more */
+.load-more-wrap { text-align: center; margin-top: 20px; }
+.btn-load-more {
+  padding: 10px 40px; border: 1.5px solid var(--border);
+  border-radius: var(--radius-md); background: var(--surface);
+  font-size: var(--fs-caption); cursor: pointer; color: var(--text);
+  transition: all 0.2s;
+}
+.btn-load-more:hover { border-color: var(--primary); color: var(--primary); }
+.no-more { color: var(--text-muted); font-size: var(--fs-small); }
+
+/* Spinner wrap */
+.spinner-wrap { display: flex; justify-content: center; padding: 60px 0; }
+
+/* ===== Mobile sticky bottom bar — detail page ===== */
+@media (max-width: 768px) {
+  body { padding-bottom: 116px; }
+  #detail-sticky-bar { z-index: 1001; }
+}
+#detail-sticky-bar {
+  align-items: center; gap: 10px;
+  flex-wrap: nowrap;
+}
+#detail-sticky-bar .sticky-bar-price {
+  display: flex; align-items: baseline; white-space: nowrap; flex-shrink: 0;
+}
+#detail-sticky-bar .sticky-bar-unit {
+  font-size: var(--fs-caption); color: var(--danger); font-weight: 700;
+  margin-right: 2px;
+}
+#detail-sticky-bar .sticky-bar-price > span:last-child {
+  font-size: 1.3rem; font-weight: 800; color: var(--danger);
+  font-variant-numeric: tabular-nums;
+}
+#detail-sticky-bar .btn {
+  flex: 1; min-height: 40px; padding: 8px 12px;
+  font-size: var(--fs-caption); border-radius: var(--radius-md); white-space: nowrap;
+}
+#detail-sticky-bar .btn-primary {
+  background: var(--danger); border-color: var(--danger); color: #fff;
+}
+@media (max-width: 480px) {
+  #detail-sticky-bar .btn { padding: 8px 8px; font-size: var(--fs-small); }
+  #detail-sticky-bar .sticky-bar-price > span:last-child { font-size: 1.1rem; }
+}
+</style>
+</head>
+<body>
+
+<nav id="blitz-navbar" class="blitz-navbar"></nav>
+
+<!-- ===== SECKILL BANNER ===== -->
+<div id="seckill-banner" class="seckill-banner" style="display:none;">
+  <span>⚡ 限时秒杀进行中</span>
+  <span class="seckill-countdown" id="seckill-countdown"></span>
+</div>
+
+<main class="main-content">
+
+  <!-- Breadcrumb -->
+  <div class="breadcrumb">
+    <a href="/">首页</a>
+    <span class="sep">&gt;</span>
+    <a href="/products.html">全部商品</a>
+    <span class="sep">&gt;</span>
+    <span id="breadcrumb-name">商品详情</span>
+  </div>
+
+  <!-- Loading -->
+  <div id="loading-area" style="display:flex;justify-content:center;padding:40px 0;">
+    <div class="detail-layout" style="width:100%;max-width:1200px">
+      <div class="detail-image-wrap">
+        <div class="skeleton" style="width:100%;aspect-ratio:1;border-radius:8px;"></div>
+      </div>
+      <div class="detail-info">
+        <div class="skeleton skeleton-text" style="height:24px;width:75%;"></div>
+        <div class="skeleton skeleton-text short" style="margin-top:10px;"></div>
+        <div style="margin-top:20px;padding:16px;background:var(--bg-secondary,#f5f5f5);border-radius:8px;">
+          <div class="skeleton skeleton-price" style="width:28%;height:28px;"></div>
+          <div class="skeleton skeleton-text" style="width:22%;margin-top:8px;"></div>
+        </div>
+        <div style="margin-top:16px;display:flex;gap:16px;flex-wrap:wrap;">
+          <div class="skeleton skeleton-text" style="width:18%;"></div>
+          <div class="skeleton skeleton-text" style="width:18%;"></div>
+          <div class="skeleton skeleton-text" style="width:18%;"></div>
+        </div>
+        <div style="margin-top:20px;">
+          <div class="skeleton" style="height:42px;width:100%;border-radius:8px;"></div>
+        </div>
+        <div style="margin-top:12px;">
+          <div class="skeleton" style="height:42px;width:100%;border-radius:8px;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Error -->
+  <div id="error-state" class="empty-state" style="display:none;">
+    <div class="empty-icon">😞</div>
+    <h3 id="error-msg">加载失败</h3>
+    <p>请检查商品是否存在或稍后再试</p>
+    <a href="/products.html" class="btn btn-outline mt-16">返回商品列表</a>
+  </div>
+
+  <!-- ===== DETAIL LAYOUT ===== -->
+  <div id="detail-content" style="display:none;">
+    <div class="detail-layout">
+
+      <!-- LEFT: images -->
+      <div class="detail-image-wrap">
+        <div id="main-img-wrap" class="detail-main-img">
+          <img id="main-img" src="" alt="商品图片" style="display:none;">
+          <div id="main-img-placeholder" class="detail-main-img placeholder-img">📦</div>
+          <div class="zoom-lens"></div>
+          <div class="zoom-result"></div>
+        </div>
+        <div class="detail-thumbs" id="thumbs-row"></div>
+      </div>
+
+      <!-- RIGHT: info -->
+      <div class="detail-info">
+        <h1 id="product-name">--</h1>
+        <div class="detail-subtitle" id="product-subtitle" style="display:none;"></div>
+
+        <!-- Price box -->
+        <div class="detail-price-box">
+          <div class="detail-price-row">
+            <span class="detail-price"><span class="unit">¥</span><span id="price-current">--</span></span>
+            <span class="detail-original" id="price-original" style="display:none;"></span>
+            <span class="detail-discount-tag" id="discount-tag" style="display:none;"></span>
+          </div>
+        </div>
+
+        <!-- Trust Badges -->
+        <div class="trust-badges">
+          <div class="trust-badge">🔄 30天无忧退货</div>
+          <div class="trust-badge">🚚 满99包邮</div>
+          <div class="trust-badge">✅ 正品保障</div>
+        </div>
+
+        <!-- Meta -->
+        <div class="detail-meta">
+          <span>📦 销量 <strong id="meta-sales">0</strong></span>
+          <span>👁️ <strong id="meta-viewers">--</strong> 人正在浏览</span>
+          <span>🛒 已售 <strong id="meta-purchased">0</strong> 件</span>
+          <span>⭐ 评分 <strong id="meta-rating">--</strong></span>
+          <span id="meta-shipping">🚚 快递 免运费</span>
+        </div>
+
+        <!-- SKU -->
+        <div class="sku-group" id="sku-group" style="display:none;">
+          <div class="sku-label">规格</div>
+          <div class="sku-options" id="sku-options"></div>
+        </div>
+
+        <!-- Quantity + Stock -->
+        <div class="qty-row">
+          <div class="qty-control">
+            <button id="qty-minus">−</button>
+            <input type="number" id="qty-input" value="1" min="1" max="999">
+            <button id="qty-plus">+</button>
+          </div>
+          <span class="detail-stock" id="stock-indicator">库存充足</span>
+        </div>
+
+        <!-- Actions -->
+        <div class="detail-actions">
+          <button class="btn btn-primary btn-lg" id="btn-buy">立即购买</button>
+          <button class="btn btn-outline btn-lg" id="btn-cart">加入购物车</button>
+        </div>
+
+        <!-- Mobile sticky bottom bar -->
+        <div class="sticky-bottom-bar" id="detail-sticky-bar">
+          <div class="sticky-bar-price">
+            <span class="sticky-bar-unit">¥</span>
+            <span id="sticky-bar-price">--</span>
+          </div>
+          <button class="btn btn-outline" id="sticky-btn-cart">加入购物车</button>
+          <button class="btn btn-primary" id="sticky-btn-buy">立即购买</button>
+        </div>
+
+        <!-- Shop card -->
+        <div class="shop-card" id="shop-card">
+          <img id="shop-logo" src="" alt="">
+          <div>
+            <div class="shop-name" id="shop-name">--</div>
+            <div class="shop-stats">
+              <span id="shop-goods">--件宝贝</span>
+              <span id="shop-fans">--粉丝</span>
+            </div>
+          </div>
+          <button class="btn-shop" id="btn-go-shop">进店逛逛</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- ===== REVIEW SECTION ===== -->
+<div class="review-section" id="review-section" style="display:none;">
+  <h2>商品评价（<span id="review-total">0</span>）</h2>
+
+  <!-- Review summary -->
+  <div class="review-summary">
+    <div class="review-score">
+      <div class="score-number" id="avg-score-num">--</div>
+      <div class="score-stars" id="avg-score-stars"></div>
+      <div class="score-total"><span id="avg-total-count">0</span> 条评价</div>
+    </div>
+    <div class="review-bars" id="review-distribution"></div>
+  </div>
+
+  <!-- Review form -->
+  <div class="review-form">
+    <h3>写评价</h3>
+    <div id="review-star-input" class="star-rating"></div>
+    <textarea id="review-content" placeholder="分享你的使用体验..."></textarea>
+    <div id="review-image-upload" class="upload-previews"></div>
+    <button class="btn btn-primary" id="btn-submit-review">提交评价</button>
+  </div>
+
+  <!-- Review list -->
+  <div class="review-list flex flex-col gap-16" id="review-list"></div>
+  <div class="load-more-wrap" id="load-more-wrap"></div>
+</div>
+
+<footer class="blitz-footer">
+  <p>Blitz 智能商城</p>
+  <p>发现好物，享受生活</p>
+</footer>
+
+<script src="/js/api.js"></script>
+<script src="/js/common.js"></script>
+<script>
+(function() {
+  'use strict';
+
+  // ===== STATE =====
+  var isSeckill = getQueryParam('seckill') === '1';
+  var productId = getQueryParam('id') || '';
+  var product = null;
+  var selectedSku = null;
+  var quantity = 1;
+  var reviewPage = 1;
+  var reviewHasMore = false;
+  var reviewRating = 0;
+  var reviewImages = [];
+  var seckillEnd = 0;
+  var seckillTimer = null;
+
+  // ===== DOM refs =====
+  var $ = function(id) { return document.getElementById(id); };
+
+  // ===== INIT =====
+  document.addEventListener('DOMContentLoaded', function() {
+    renderNavbar('products');
+    initMobileNav('products');
+
+    if (!productId) {
+      showError('缺少商品 ID', '请从商品列表选择一件商品');
+      return;
+    }
+
+    loadProduct();
+  });
+
+  // Image zoom (uses elements already in HTML)
+  var mainImg = document.querySelector('.detail-main-img');
+  if (mainImg) {
+    var lens = mainImg.querySelector('.zoom-lens');
+    var result = mainImg.querySelector('.zoom-result');
+    var img = mainImg.querySelector('img');
+    mainImg.addEventListener('mousemove', function(e) {
+      if (!img || !lens || !result) return;
+      var rect = mainImg.getBoundingClientRect();
+      var x = e.clientX - rect.left, y = e.clientY - rect.top;
+      var lw = 120, lh = 120;
+      var lx = Math.max(0, Math.min(x - lw/2, rect.width - lw));
+      var ly = Math.max(0, Math.min(y - lh/2, rect.height - lh));
+      lens.style.left = lx + 'px'; lens.style.top = ly + 'px'; lens.style.display = 'block';
+      result.style.display = 'block';
+      var zx = (lx / rect.width) * img.naturalWidth;
+      var zy = (ly / rect.height) * img.naturalHeight;
+      result.style.backgroundImage = 'url(' + img.src + ')';
+      result.style.backgroundSize = (img.naturalWidth * 3) + 'px ' + (img.naturalHeight * 3) + 'px';
+      result.style.backgroundPosition = '-' + (zx * 3 - 180) + 'px -' + (zy * 3 - 180) + 'px';
+    });
+    mainImg.addEventListener('mouseleave', function() { lens.style.display = 'none'; result.style.display = 'none'; });
+  }
+
+  // ===== LOAD PRODUCT =====
+  function loadProduct() {
+    showLoading(true);
+    hideError();
+    hideContent();
+
+    api.getProduct(productId).then(function(r) {
+      var data = r.data || r;
+      if (!data) {
+        showError('商品不存在', '该商品可能已下架或不存在');
+        return;
+      }
+      product = data;
+      renderProduct();
+      showContent();
+      loadReviews();
+    }).catch(function(e) {
+      showError('加载失败', e.message || '请稍后重试');
+    }).finally(function() {
+      showLoading(false);
+    });
+  }
+
+  // ===== RENDER PRODUCT =====
+  function renderProduct() {
+    // Breadcrumb
+    $('breadcrumb-name').textContent = product.name || '商品详情';
+
+    // Name & subtitle
+    $('product-name').textContent = product.name || '未命名商品';
+    var subtitle = product.subtitle || product.promotionTag || '';
+    var subtitleEl = $('product-subtitle');
+    if (subtitle) {
+      subtitleEl.textContent = subtitle;
+      subtitleEl.style.display = '';
+    } else {
+      subtitleEl.style.display = 'none';
+    }
+
+    // Images
+    renderImages();
+
+    // SKUs
+    renderSkus();
+
+    // Meta
+    $('meta-sales').textContent = product.sales || product.soldCount || 0;
+    $('meta-purchased').textContent = product.sales || product.soldCount || 0;
+    var viewers = Math.floor(Math.random() * 990) + 10; // 10-999
+    $('meta-viewers').textContent = viewers;
+    $('meta-rating').textContent = (product.rating != null) ? product.rating : (product.avgRating || '--');
+    $('meta-shipping').innerHTML = product.freeShipping !== false
+      ? '🚚 快递 免运费'
+      : '🚚 快递 ¥' + (product.shipping || '8');
+
+    // Shop card
+    renderShopCard();
+
+    // Seckill
+    if (isSeckill && (product.seckill || product.seckillPrice)) {
+      $('seckill-banner').style.display = 'flex';
+      seckillEnd = product.seckillEnd || product.seckillEndTime || (Date.now() + 3600000);
+      startSeckillCountdown();
+      $('btn-buy').textContent = '立即秒杀';
+      $('sticky-btn-buy').textContent = '立即秒杀';
+    }
+
+    // Actions
+    bindActions();
+  }
+
+  function renderImages() {
+    var images = product.images || (product.image ? [product.image] : []);
+    var mainImg = $('main-img');
+    var placeholder = $('main-img-placeholder');
+    var thumbsRow = $('thumbs-row');
+    thumbsRow.innerHTML = '';
+
+    if (images.length > 0) {
+      mainImg.src = images[0];
+      mainImg.style.display = '';
+      placeholder.style.display = 'none';
+
+      if (images.length > 1) {
+        images.forEach(function(src, i) {
+          var thumb = document.createElement('img');
+          thumb.src = src;
+          thumb.className = 'detail-thumb' + (i === 0 ? ' active' : '');
+          thumb.onclick = function() {
+            mainImg.src = src;
+            mainImg.style.display = '';
+            placeholder.style.display = 'none';
+            thumbsRow.querySelectorAll('.detail-thumb').forEach(function(t, j) {
+              t.classList.toggle('active', j === i);
+            });
+          };
+          thumb.onerror = function() { this.style.display = 'none'; };
+          thumbsRow.appendChild(thumb);
+        });
+      }
+    } else {
+      mainImg.style.display = 'none';
+      placeholder.style.display = 'flex';
+    }
+  }
+
+  function renderSkus() {
+    var skus = product.skus;
+    var skuGroup = $('sku-group');
+    var skuOptions = $('sku-options');
+
+    if (!skus || skus.length === 0) {
+      skuGroup.style.display = 'none';
+      selectedSku = null;
+      updatePriceDisplay({ price: product.price, originalPrice: product.originalPrice });
+      updateStockDisplay();
+      return;
+    }
+
+    skuGroup.style.display = 'block';
+    skuOptions.innerHTML = '';
+
+    skus.forEach(function(sku, i) {
+      var btn = document.createElement('button');
+      btn.className = 'sku-option';
+      btn.textContent = sku.name || sku.spec || ('规格' + (i + 1));
+      btn.setAttribute('data-sku-index', i);
+      if (sku.stock != null && sku.stock <= 0) {
+        btn.disabled = true;
+      }
+      btn.onclick = function() { selectSku(sku, btn); };
+      skuOptions.appendChild(btn);
+    });
+
+    // Pre-select: defaultSkuId or first available
+    var preSelected = null;
+    var preBtn = null;
+
+    if (product.defaultSkuId) {
+      for (var j = 0; j < skus.length; j++) {
+        if (String(skus[j].id) === String(product.defaultSkuId)) {
+          preSelected = skus[j];
+          preBtn = skuOptions.children[j];
+          break;
+        }
+      }
+    }
+
+    if (!preSelected || (preSelected.stock != null && preSelected.stock <= 0)) {
+      for (var k = 0; k < skus.length; k++) {
+        if (skus[k].stock == null || skus[k].stock > 0) {
+          preSelected = skus[k];
+          preBtn = skuOptions.children[k];
+          break;
+        }
+      }
+    }
+
+    if (!preSelected && skus.length > 0) {
+      preSelected = skus[0];
+      preBtn = skuOptions.children[0];
+    }
+
+    if (preSelected) {
+      selectSku(preSelected, preBtn);
+    } else {
+      updatePriceDisplay(skus[0]);
+      updateStockDisplay();
+    }
+  }
+
+  function selectSku(sku, btnEl) {
+    if (!sku) return;
+    if (sku.stock != null && sku.stock <= 0) {
+      showToast('该规格已售罄', 'warning');
+      return;
+    }
+    selectedSku = sku;
+
+    // Update button states
+    var buttons = $('sku-options').querySelectorAll('.sku-option');
+    buttons.forEach(function(b) { b.classList.remove('selected'); });
+    if (btnEl) btnEl.classList.add('selected');
+
+    updatePriceDisplay(sku);
+    updateStockDisplay();
+  }
+
+  function updatePriceDisplay(sku) {
+    if (isSeckill && product && product.seckillPrice != null) {
+      $('price-current').textContent = formatPrice(product.seckillPrice);
+      $('sticky-bar-price').textContent = formatPrice(product.seckillPrice);
+      if (product.originalPrice && product.originalPrice > product.seckillPrice) {
+        $('price-original').textContent = formatPrice(product.originalPrice);
+        $('price-original').style.display = '';
+        var pct = Math.round((1 - product.seckillPrice / product.originalPrice) * 100);
+        $('discount-tag').textContent = pct + '% OFF';
+        $('discount-tag').style.display = '';
+      } else {
+        $('price-original').style.display = 'none';
+        $('discount-tag').style.display = 'none';
+      }
+      return;
+    }
+
+    var s = sku || {};
+    var current = s.price != null ? s.price : (product ? product.price : 0);
+    var original = s.originalPrice != null ? s.originalPrice : (product ? product.originalPrice : 0);
+
+    $('price-current').textContent = formatPrice(current);
+    $('sticky-bar-price').textContent = formatPrice(current);
+
+    if (original && Number(original) > Number(current)) {
+      $('price-original').textContent = formatPrice(original);
+      $('price-original').style.display = '';
+      var pct = Math.round((1 - current / original) * 100);
+      $('discount-tag').textContent = pct + '% OFF';
+      $('discount-tag').style.display = '';
+    } else {
+      $('price-original').style.display = 'none';
+      $('discount-tag').style.display = 'none';
+    }
+  }
+
+  function updateStockDisplay() {
+    var stockEl = $('stock-indicator');
+    var qtyInput = $('qty-input');
+    var stock = getCurrentStock();
+
+    if (stock != null && stock <= 0) {
+      stockEl.textContent = '已售罄';
+      stockEl.classList.add('out');
+      qtyInput.max = 0;
+      if (quantity > 0) { quantity = 0; qtyInput.value = 0; }
+    } else if (stock != null) {
+      stockEl.textContent = '库存 ' + stock + ' 件';
+      stockEl.classList.remove('out');
+      qtyInput.max = stock;
+      if (quantity === 0 && stock > 0) { quantity = 1; qtyInput.value = 1; }
+      if (quantity > stock) { quantity = stock; qtyInput.value = stock; }
+    } else {
+      stockEl.textContent = '库存充足';
+      stockEl.classList.remove('out');
+      qtyInput.max = 999;
+      if (quantity < 1) { quantity = 1; qtyInput.value = 1; }
+    }
+    updateActionButtons();
+  }
+
+  function getCurrentStock() {
+    if (selectedSku && selectedSku.stock != null) return selectedSku.stock;
+    return product ? product.stock : null;
+  }
+
+  // ===== Quantity =====
+  function changeQty(delta) {
+    var input = $('qty-input');
+    var max = parseInt(input.max) || 999;
+    quantity += delta;
+    if (quantity < 1) quantity = 1;
+    if (quantity > max) quantity = max;
+    input.value = quantity;
+    updateActionButtons();
+  }
+
+  function onQtyInputChange() {
+    var input = $('qty-input');
+    var v = parseInt(input.value);
+    var max = parseInt(input.max) || 999;
+    if (isNaN(v) || v < 1) v = 1;
+    if (v > max) v = max;
+    quantity = v;
+    input.value = quantity;
+    updateActionButtons();
+  }
+
+  function updateActionButtons() {
+    var stock = getCurrentStock();
+    var disabled = (stock != null && stock <= 0) || quantity < 1;
+    $('btn-buy').disabled = disabled;
+    $('btn-cart').disabled = disabled;
+    $('sticky-btn-buy').disabled = disabled;
+    $('sticky-btn-cart').disabled = disabled;
+  }
+
+  function bindActions() {
+    $('qty-minus').onclick = function() { changeQty(-1); };
+    $('qty-plus').onclick = function() { changeQty(1); };
+    $('qty-input').onchange = onQtyInputChange;
+    $('qty-input').oninput = onQtyInputChange;
+    $('btn-buy').onclick = handleBuy;
+    $('btn-cart').onclick = handleAddCart;
+    $('sticky-btn-buy').onclick = handleBuy;
+    $('sticky-btn-cart').onclick = handleAddCart;
+    $('btn-go-shop').onclick = goShop;
+    $('btn-submit-review').onclick = submitReview;
+
+    updateActionButtons();
+  }
+
+  // ===== BUY =====
+  function handleBuy() {
+    if (!product) return;
+    var skus = product.skus;
+    if (skus && skus.length > 0 && !selectedSku) {
+      showToast('请选择商品规格', 'warning');
+      return;
+    }
+    if (quantity < 1) {
+      showToast('请选择数量', 'warning');
+      return;
+    }
+
+    if (!AUTH.isLoggedIn()) {
+      location.href = '/login.html?redirect=' + encodeURIComponent(location.pathname + location.search);
+      return;
+    }
+
+    var buyBtn = $('btn-buy');
+    var stickyBuyBtn = $('sticky-btn-buy');
+    buyBtn.disabled = true;
+    if (stickyBuyBtn) stickyBuyBtn.disabled = true;
+    buyBtn.textContent = '下单中...';
+    if (stickyBuyBtn) stickyBuyBtn.textContent = '下单中...';
+
+    var fnName = (isSeckill && product.seckill) ? 'seckillOrder' : 'createOrder';
+    var orderApi = api[fnName] || api.createOrder;
+    var params = {
+      productId: product.id || productId,
+      skuId: selectedSku ? (selectedSku.id || selectedSku.skuId) : null,
+      quantity: quantity
+    };
+    if (isSeckill && product.seckillId) params.seckillId = product.seckillId;
+
+    orderApi(params).then(function(order) {
+      showToast('下单成功！', 'success');
+      var oid = (order && (order.id || order.orderId)) || '';
+      setTimeout(function() {
+        if (oid) {
+          location.href = '/payment.html?orderId=' + oid;
+        } else {
+          location.href = '/user.html';
+        }
+      }, 800);
+    }).catch(function(e) {
+      showToast('下单失败：' + (e.message || '请重试'), 'error');
+      buyBtn.disabled = false;
+      if (stickyBuyBtn) stickyBuyBtn.disabled = false;
+      buyBtn.textContent = isSeckill ? '立即秒杀' : '立即购买';
+      if (stickyBuyBtn) stickyBuyBtn.textContent = isSeckill ? '立即秒杀' : '立即购买';
+    });
+  }
+
+  function handleAddCart(e) {
+    if (!product) return;
+    var skus = product.skus;
+    if (skus && skus.length > 0 && !selectedSku) {
+      showToast('请选择商品规格', 'warning');
+      return;
+    }
+    if (quantity < 1) {
+      showToast('请选择数量', 'warning');
+      return;
+    }
+
+    try {
+      if (typeof CART !== 'undefined' && CART.add) {
+        CART.add(product, selectedSku ? (selectedSku.id || selectedSku.skuId) : null, quantity);
+      } else {
+        // localStorage fallback
+        var cart = JSON.parse(localStorage.getItem('blitz_cart') || '[]');
+        var itemId = (selectedSku ? selectedSku.id || selectedSku.skuId : product.id || productId);
+        var existing = cart.find(function(c) { return c.skuId === itemId; });
+        if (existing) {
+          existing.quantity += quantity;
+        } else {
+          cart.push({
+            productId: product.id || productId,
+            skuId: itemId,
+            name: product.name,
+            image: (product.images && product.images[0]) || product.image || '',
+            price: selectedSku ? selectedSku.price : product.price,
+            quantity: quantity
+          });
+        }
+        localStorage.setItem('blitz_cart', JSON.stringify(cart));
+      }
+      showToast('已加入购物车', 'success');
+      // Fly-to-cart animation
+      var img = (product.images && product.images[0]) || product.image || product.mainImage || '';
+      if (img && typeof flyToCart === 'function') {
+        flyToCart(img, e.currentTarget);
+      }
+      if (typeof updateCartBadge === 'function') {
+        updateCartBadge();
+      }
+    } catch (err) {
+      showToast('加入购物车失败', 'error');
+    }
+  }
+
+  // ===== SHOP =====
+  function renderShopCard() {
+    var shop = product.shop || product.store || {};
+    $('shop-name').textContent = shop.name || '官方店铺';
+    $('shop-goods').textContent = (shop.goodsCount || shop.productCount || '--') + '件宝贝';
+    $('shop-fans').textContent = (shop.fans || shop.followerCount || '--') + '粉丝';
+
+    var logoEl = $('shop-logo');
+    if (shop.logo) {
+      logoEl.src = shop.logo;
+    } else {
+      logoEl.src = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><rect fill="#e5e7eb" width="48" height="48" rx="24"/><text x="24" y="32" text-anchor="middle" font-size="20" fill="#9ca3af">店</text></svg>');
+    }
+  }
+
+  function goShop() {
+    var shop = (product && product.shop) || (product && product.store) || {};
+    var shopId = shop.id || (product && product.shopId) || '';
+    if (shopId) {
+      location.href = '/shop.html?id=' + shopId;
+    } else {
+      showToast('暂无店铺信息', 'warning');
+    }
+  }
+
+  // ===== SECKILL =====
+  function startSeckillCountdown() {
+    function tick() {
+      var now = Date.now();
+      var left = Math.max(0, seckillEnd - now);
+      var h = Math.floor(left / 3600000);
+      var m = Math.floor((left % 3600000) / 60000);
+      var s = Math.floor((left % 60000) / 1000);
+      $('seckill-countdown').innerHTML =
+        '<span class="seg">' + pad2(h) + '</span>:<span class="seg">' + pad2(m) + '</span>:<span class="seg">' + pad2(s) + '</span>';
+      if (left <= 0) {
+        clearInterval(seckillTimer);
+        $('seckill-banner').style.display = 'none';
+        $('btn-buy').textContent = '立即购买';
+        $('sticky-btn-buy').textContent = '立即购买';
+        showToast('秒杀已结束', 'warning');
+      }
+    }
+    tick();
+    seckillTimer = setInterval(tick, 1000);
+  }
+
+  function pad2(n) { return n < 10 ? '0' + n : '' + n; }
+
+  // ===== REVIEWS =====
+  function loadReviews(page) {
+    page = page || 1;
+    $('review-section').style.display = '';
+
+    api.getReviewStats(productId).then(function(statsData) {
+      if (statsData.data) renderReviewSummary(statsData.data);
+    }).catch(function(){});
+    api.getReviews(productId, { page: page, size: 10 }).then(function(data) {
+      var resp = data.data || data;
+      var list = resp.records || resp.list || (Array.isArray(resp) ? resp : []);
+      reviewHasMore = list.length >= 10;
+
+      if (page === 1) {
+        renderReviewSummary(resp);
+        $('review-list').innerHTML = '';
+      }
+
+      list.forEach(function(r) {
+        $('review-list').appendChild(buildReviewItem(r));
+      });
+
+      $('review-total').textContent = resp.total != null ? resp.total : '--';
+      renderLoadMore(page);
+    }).catch(function(e) {
+      console.error('Load reviews failed:', e);
+      if (page === 1) {
+        $('review-list').innerHTML = '<p style="color:#9ca3af;text-align:center;padding:20px;">暂无评价，快来写第一条评价吧</p>';
+      }
+    });
+  }
+
+  function renderReviewSummary(data) {
+    var total = data.total || 0;
+    var avg = data.average || 0;
+    var counts = data.counts || [0,0,0,0,0,0];
+
+    $('avg-score-num').textContent = Number(avg).toFixed(1);
+    $('avg-score-stars').innerHTML = renderStars(avg);
+    $('avg-total-count').textContent = total;
+
+    var distHtml = '';
+    for (var star = 5; star >= 1; star--) {
+      var count = counts[star] || 0;
+      var pct = total > 0 ? Math.round(count / total * 100) : 0;
+      distHtml +=
+        '<div class="review-bar-row">' +
+          '<span class="bar-label">' + star + '星</span>' +
+          '<div class="bar-track"><div class="bar-fill" style="width:' + pct + '%"></div></div>' +
+          '<span class="bar-pct">' + count + '</span>' +
+        '</div>';
+    }
+    $('review-distribution').innerHTML = distHtml;
+  }
+
+  function buildReviewItem(r) {
+    var div = document.createElement('div');
+    div.className = 'review-item';
+
+    var avatarSrc = r.avatar || r.userAvatar || '';
+    var avatarHtml;
+    if (avatarSrc) {
+      avatarHtml = '<img class="review-avatar" src="' + escapeHtml(avatarSrc) + '" alt="" onerror="this.style.display=\'none\'">';
+    } else {
+      var initial = (r.username || r.nickname || '?').charAt(0);
+      avatarHtml = '<div class="review-avatar" style="display:flex;align-items:center;justify-content:center;color:#fff;background:#f97316;font-size:14px;font-weight:600;">' + initial + '</div>';
+    }
+
+    var imagesHtml = '';
+    if (r.images && r.images.length > 0) {
+      imagesHtml = '<div class="review-images">' +
+        r.images.map(function(src) {
+          return '<img src="' + escapeHtml(src) + '" alt="评价图片" onclick="window.open(\'' + escapeHtml(src) + '\')" onerror="this.style.display=\'none\'" loading="lazy">';
+        }).join('') +
+        '</div>';
+    }
+
+    var replyHtml = '';
+    if (r.reply) {
+      replyHtml = '<div style="margin-top:8px;padding:10px 12px;background:#FFF7E6;border-left:3px solid #FF5000;border-radius:4px;font-size:0.88rem;">' +
+        '<span style="color:#FF5000;font-weight:600;">商家回复：</span>' +
+        '<span>' + escapeHtml(r.reply) + '</span>' +
+        '</div>';
+    }
+
+    var reviewId = r.id || r.reviewId || '';
+    var likeCount = r.likes || r.likeCount || 0;
+    var likedClass = r.liked ? ' liked' : '';
+    var likedIcon = r.liked ? '❤️' : '👍';
+
+    div.innerHTML =
+      '<div class="review-header">' +
+        avatarHtml +
+        '<span class="review-user">' + escapeHtml(r.username || r.nickname || '匿名用户') + '</span>' +
+        '<span class="review-stars">' + renderStars(r.rating || r.score || 0) + '</span>' +
+        '<span class="review-date">' + formatTime(r.createTime || r.createdAt || r.date) + '</span>' +
+      '</div>' +
+      (r.skuName || r.skuInfo ? '<div class="review-sku">规格: ' + escapeHtml(r.skuName || r.skuInfo) + '</div>' : '') +
+      '<div class="review-body">' + escapeHtml(r.content || r.text || r.comment || '') + '</div>' +
+      replyHtml +
+      imagesHtml +
+      '<div class="review-footer">' +
+        '<button class="btn-like' + likedClass + '" data-review-id="' + reviewId + '">' +
+          likedIcon + ' <span>' + likeCount + '</span>' +
+        '</button>' +
+      '</div>';
+
+    // Bind like button
+    var likeBtn = div.querySelector('.btn-like');
+    if (likeBtn) {
+      likeBtn.onclick = function() {
+        toggleLike(likeBtn, reviewId);
+      };
+    }
+
+    return div;
+  }
+
+  function toggleLike(btn, reviewId) {
+    var span = btn.querySelector('span');
+    var count = parseInt(span.textContent) || 0;
+    if (btn.classList.contains('liked')) return; // Already liked
+    api.likeReview(reviewId).then(function() {
+      btn.classList.add('liked');
+      btn.innerHTML = '❤️ <span>' + (count + 1) + '</span>';
+    }).catch(function() {
+      showToast('点赞失败', 'error');
+    });
+  }
+
+  function renderStars(rating) {
+    var stars = '';
+    for (var i = 1; i <= 5; i++) {
+      if (rating >= i) stars += '★';
+      else if (rating >= i - 0.5) stars += '☆';
+      else stars += '☆';
+    }
+    return stars;
+  }
+
+  function renderLoadMore(page) {
+    var wrap = $('load-more-wrap');
+    if (reviewHasMore) {
+      wrap.innerHTML = '<button class="btn-load-more" onclick="window._loadMoreReviews(' + (page + 1) + ')">加载更多</button>';
+    } else if (page > 1 && !reviewHasMore) {
+      wrap.innerHTML = '<span class="no-more">— 没有更多了 —</span>';
+    } else {
+      wrap.innerHTML = '';
+    }
+  }
+
+  window._loadMoreReviews = function(page) {
+    reviewPage = page;
+    $('load-more-wrap').innerHTML = '<span style="color:#9ca3af;">加载中...</span>';
+    loadReviews(page);
+  };
+
+  // ===== SUBMIT REVIEW =====
+  function submitReview() {
+    if (!AUTH.isLoggedIn()) {
+      location.href = '/login.html?redirect=' + encodeURIComponent(location.pathname + location.search);
+      return;
+    }
+
+    if (reviewRating === 0) {
+      showToast('请先评分', 'warning');
+      return;
+    }
+
+    var content = ($('review-content').value || '').trim();
+    if (!content) {
+      showToast('请输入评价内容', 'warning');
+      return;
+    }
+
+    var btn = $('btn-submit-review');
+    btn.disabled = true;
+    btn.textContent = '提交中...';
+
+    var params = {
+      productId: productId,
+      rating: reviewRating,
+      content: content,
+      images: JSON.stringify(reviewImages)
+    };
+
+    api.submitReview(params).then(function() {
+      showToast('评价成功！', 'success');
+      btn.disabled = false;
+      btn.textContent = '提交评价';
+      $('review-content').value = '';
+      reviewRating = 0;
+      reviewImages = [];
+      // Reset star input
+      var starContainer = $('review-star-input');
+      if (starContainer && window._resetStarInput) {
+        window._resetStarInput();
+      }
+      // Reload reviews
+      loadReviews(1);
+    }).catch(function(e) {
+      showToast('评价失败：' + (e.message || '请重试'), 'error');
+      btn.disabled = false;
+      btn.textContent = '提交评价';
+    });
+  }
+
+  // Hook review star rating
+  window._reviewStarCallback = function(rating) {
+    reviewRating = rating;
+  };
+
+  // Hook image upload results
+  function pollReviewImages() {
+    var uploadWrap = $('review-image-upload');
+    if (!uploadWrap) return;
+    var imgs = uploadWrap.querySelectorAll('img[data-url], img[src]');
+    reviewImages = [];
+    imgs.forEach(function(img) {
+      var url = img.dataset.url || img.src;
+      if (url && url.indexOf('data:') !== 0) {
+        reviewImages.push(url);
+      }
+    });
+  }
+
+  // Init review UI after common.js loads
+  var _reviewUiReady = false;
+  function initReviewUI() {
+    if (_reviewUiReady) return;
+    _reviewUiReady = true;
+
+    if (typeof createStarInput === 'function') {
+      createStarInput('review-star-input', window._reviewStarCallback);
+    }
+    if (typeof createImageUpload === 'function') {
+      createImageUpload('review-image-upload', 6);
+    }
+
+    // Poll image upload container for changes
+    setInterval(pollReviewImages, 1000);
+
+    // Clear init timer now that UI is ready
+    if (_initTimer) { clearInterval(_initTimer); _initTimer = null; }
+  }
+
+  // Retry until common.js functions are ready
+  var _initAttempts = 0;
+  var _initTimer = setInterval(function() {
+    _initAttempts++;
+    if (typeof createStarInput === 'function' || typeof createImageUpload === 'function') {
+      initReviewUI();
+    }
+    if (_initAttempts >= 30) {
+      clearInterval(_initTimer);
+      initReviewUI(); // Try one last time
+    }
+  }, 200);
+
+  // ===== UI HELPERS =====
+  function showLoading(show) {
+    $('loading-area').style.display = show ? 'flex' : 'none';
+  }
+
+  function showContent() {
+    $('detail-content').style.display = '';
+  }
+
+  function hideContent() {
+    $('detail-content').style.display = 'none';
+  }
+
+  function showError(title, msg) {
+    $('error-msg').textContent = title;
+    var descEl = document.querySelector('#error-state p');
+    if (descEl) descEl.textContent = msg;
+    $('error-state').style.display = '';
+  }
+
+  function hideError() {
+    $('error-state').style.display = 'none';
+  }
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    var div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+})();
+</script>
+
+</body>
+</html>

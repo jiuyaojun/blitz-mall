@@ -31,7 +31,8 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public Result<Void> handleUnknown(Exception e) {
-        log.error("Unknown error", e);
+        log.error("Unknown error: {} - {}", e.getClass().getSimpleName(), e.getMessage());
+        log.debug("Stacktrace:", e);
         return Result.fail(ErrorCode.SYSTEM_ERROR.getCode(), "系统内部异常，请稍后重试");
     }
 }

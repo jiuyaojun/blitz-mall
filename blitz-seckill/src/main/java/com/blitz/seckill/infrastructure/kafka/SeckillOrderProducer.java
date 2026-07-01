@@ -10,6 +10,7 @@ import java.util.concurrent.CompletableFuture;
 
 @Slf4j
 @Component
+@org.springframework.context.annotation.Profile("!minimal")
 @RequiredArgsConstructor
 public class SeckillOrderProducer {
 

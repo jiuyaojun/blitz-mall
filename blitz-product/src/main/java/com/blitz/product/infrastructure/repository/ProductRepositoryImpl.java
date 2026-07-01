@@ -41,6 +41,15 @@ public class ProductRepositoryImpl implements ProductRepository {
     }
 
     @Override
+    public List<Product> findAll(int page, int size) {
+        IPage<Product> p = productMapper.selectPage(
+            new Page<>(page, size),
+            new LambdaQueryWrapper<Product>().orderByDesc(Product::getCreateTime)
+        );
+        return p.getRecords();
+    }
+
+    @Override
     public List<Product> findByCategoryId(Long categoryId, int page, int size) {
         IPage<Product> p = productMapper.selectPage(
             new Page<>(page, size),
@@ -59,6 +68,11 @@ public class ProductRepositoryImpl implements ProductRepository {
                 .like(Product::getBrand, keyword)
         );
         return p.getRecords();
+    }
+
+    @Override
+    public long countAll() {
+        return productMapper.selectCount(null);
     }
 
     @Override

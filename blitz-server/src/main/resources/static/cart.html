@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>购物车 - Blitz 智能商城</title>
+<link rel="stylesheet" href="/css/common.css">
+</head>
+<body>
+
+<nav id="blitz-navbar" class="blitz-navbar"></nav>
+
+<main class="main-content">
+
+  <!-- Empty State -->
+  <div id="cartEmpty" class="empty-state hidden">
+    <div class="empty-icon">🛒</div>
+    <h3>购物车是空的</h3>
+    <p>快去挑选心仪的商品吧</p>
+    <a href="/products.html" class="btn btn-primary mt-16">去逛逛</a>
+  </div>
+
+  <!-- Cart Content -->
+  <div id="cartContent" class="hidden">
+    <div class="section-header">
+      <h2>🛒 购物车<span id="cartItemCount" style="font-size:0.85rem;font-weight:400;color:var(--text-muted);margin-left:8px"></span></h2>
+    </div>
+    <div id="cartShopGroups"></div>
+  </div>
+
+</main>
+
+<!-- Cart Footer (sticky) -->
+<div id="cartFooter" class="cart-footer hidden">
+  <label class="checkbox-wrap">
+    <input type="checkbox" id="selectAllCheckbox">
+    <span style="margin-left:6px;font-size:0.88rem">全选</span>
+  </label>
+  <button id="removeCheckedBtn" class="btn btn-sm btn-outline">删除选中</button>
+  <div style="flex:1"></div>
+  <div style="text-align:right">
+    <div style="font-size:0.78rem;color:var(--text-muted)">合计：</div>
+    <div class="total-price" id="cartTotalPrice">¥0.00</div>
+    <div class="total-hint" id="cartCheckedCount"></div>
+  </div>
+  <button id="checkoutBtn" class="btn btn-primary btn-lg">去结算</button>
+</div>
+
+<script src="/js/common.js"></script>
+<script src="/js/api.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  /* ==================== Render ==================== */
+  function isStale(item) { return !item.name || item.price === 0; }
+
+  async function renderCart() {
+    var items = CART.getItems();
+
+    // Fetch current product prices for price-drop comparison
+    var currentPriceMap = {};
+    var productDataMap = {};
+    var uniquePids = [];
+    for (var pi = 0; pi < items.length; pi++) {
+      var pid = items[pi].productId;
+      if (pid != null && uniquePids.indexOf(pid) === -1) uniquePids.push(pid);
+    }
+    if (uniquePids.length > 0) {
+      var fetches = uniquePids.map(function(pid) {
+        return api.getProduct(pid).then(function(r) {
+          productDataMap[pid] = r.data || r;
+        }).catch(function(){});
+      });
+      await Promise.all(fetches);
+      for (var ci = 0; ci < items.length; ci++) {
+        var it = items[ci];
+        var prod = productDataMap[it.productId];
+        if (prod) {
+          var curPrice;
+          if (it.skuId && prod.skus) {
+            var sku = prod.skus.find(function(s) { return String(s.id) === String(it.skuId); });
+            curPrice = sku ? sku.price : (prod.price || prod.minPrice || 0);
+          } else {
+            curPrice = prod.price || prod.minPrice || 0;
+          }
+          if (curPrice != null) currentPriceMap[it.key] = curPrice;
+        }
+      }
+    }
+    var emptyEl = document.getElementById('cartEmpty');
+    var contentEl = document.getElementById('cartContent');
+    var footerEl = document.getElementById('cartFooter');
+    var groupsEl = document.getElementById('cartShopGroups');
+
+    if (items.length === 0) {
+      emptyEl.classList.remove('hidden');
+      contentEl.classList.add('hidden');
+      footerEl.classList.add('hidden');
+      return;
+    }
+
+    emptyEl.classList.add('hidden');
+    contentEl.classList.remove('hidden');
+    footerEl.classList.remove('hidden');
+
+    // Item count
+    document.getElementById('cartItemCount').textContent = '(' + CART.getCount() + ' 件)';
+
+    // Group by shop
+    var groups = groupByShop(items);
+    var html = '';
+
+    // Stale-items count
+    var staleCount = 0;
+    for (var si = 0; si < items.length; si++) {
+      if (isStale(items[si])) staleCount++;
+    }
+    if (staleCount > 0) {
+      html += '<div class="stale-bar" style="display:flex;align-items:center;gap:12px;padding:8px 16px;margin-bottom:8px;background:#fff3cd;border:1px solid #ffc107;border-radius:6px;font-size:0.85rem">';
+      html += '<span>⚠️ 有 ' + staleCount + ' 件商品已失效</span>';
+      html += '<button id="clearStaleBtn" class="btn btn-sm btn-outline" style="margin-left:auto">一键清空失效</button>';
+      html += '</div>';
+    }
+
+    for (var g = 0; g < groups.length; g++) {
+      var group = groups[g];
+      var allChecked = group.items.every(function (i) { return i.checked; });
+
+      html += '<div class="cart-shop-group">';
+      html += '<div class="cart-shop-header">';
+      html += '<label class="checkbox-wrap">';
+      html += '<input type="checkbox" class="shop-checkbox" data-shop-key="' + escAttr(group.key) + '"' + (allChecked ? ' checked' : '') + '>';
+      html += '</label>';
+      html += '<span>🏪 ' + escHtml(group.shopName) + '</span>';
+      html += '</div>';
+
+      for (var j = 0; j < group.items.length; j++) {
+        var item = group.items[j];
+        var subtotal = item.price * item.quantity;
+        var imgSrc = item.image || '';
+
+        html += '<div class="cart-item" data-item-key="' + escAttr(item.key) + '">';
+
+        // Checkbox
+        html += '<label class="checkbox-wrap">';
+        html += '<input type="checkbox" class="item-checkbox" data-item-key="' + escAttr(item.key) + '"' + (item.checked ? ' checked' : '') + '>';
+        html += '</label>';
+
+        // Image
+        html += '<div class="cart-item-img">';
+        if (imgSrc) {
+          html += '<img src="' + escAttr(imgSrc) + '" alt="' + escAttr(item.name) + '" loading="lazy">';
+        } else {
+          html += '<span style="font-size:2rem;opacity:0.3">📦</span>';
+        }
+        html += '</div>';
+
+        // Info
+        html += '<div class="cart-item-info">';
+        html += '<div class="cart-item-name">' + escHtml(item.name) + '</div>';
+        if (isStale(item)) {
+          html += '<span style="display:inline-block;padding:1px 6px;font-size:0.68rem;background:#f8d7da;color:#721c24;border-radius:3px;margin-top:2px">商品已失效</span>';
+        }
+        html += '<div class="cart-item-sku">' + escHtml(item.skuName || '默认') + '</div>';
+        html += '</div>';
+
+        // Unit price
+        html += '<div class="cart-item-price">';
+        html += formatPrice(item.price);
+        // Price-drop badge
+        var curP = currentPriceMap[item.key];
+        if (curP != null && curP < item.price) {
+          var drop = item.price - curP;
+          html += ' <span style="display:inline-block;padding:1px 6px;font-size:0.68rem;background:#d4edda;color:#155724;border-radius:3px">已降价 ¥' + drop.toFixed(2) + '</span>';
+        }
+        html += '</div>';
+
+        // Quantity control
+        html += '<div class="qty-control">';
+        html += '<button class="qty-minus" data-item-key="' + escAttr(item.key) + '">−</button>';
+        html += '<span style="display:inline-flex;align-items:center;justify-content:center;width:48px;text-align:center;font-weight:600;font-size:0.9rem;user-select:none">' + item.quantity + '</span>';
+        html += '<button class="qty-plus" data-item-key="' + escAttr(item.key) + '">+</button>';
+        html += '</div>';
+
+        // Subtotal
+        html += '<div class="cart-item-subtotal">' + formatPrice(subtotal) + '</div>';
+
+        // Delete
+        html += '<button class="cart-item-del" data-item-key="' + escAttr(item.key) + '" title="删除">🗑️</button>';
+
+        html += '</div>';
+      }
+
+      html += '</div>';
+    }
+
+    groupsEl.innerHTML = html;
+
+    // Update footer
+    updateFooter();
+    bindCartEvents();
+  }
+
+  /* ==================== Group by Shop ==================== */
+  function groupByShop(items) {
+    var map = {};
+    var order = [];
+
+    for (var i = 0; i < items.length; i++) {
+      var item = items[i];
+      var shopId = item.shopId != null ? String(item.shopId) : '__none__';
+      var shopName = item.shopName || '其他店铺';
+      var key = shopId;
+
+      if (!map[key]) {
+        map[key] = { key: key, shopId: shopId, shopName: shopName, items: [] };
+        order.push(key);
+      }
+      map[key].items.push(item);
+    }
+
+    return order.map(function (k) { return map[k]; });
+  }
+
+  /* ==================== Update Footer ==================== */
+  function updateFooter() {
+    var items = CART.getItems();
+    var allChecked = items.length > 0 && items.every(function (i) { return i.checked; });
+    var checkedItems = CART.getCheckedItems();
+    var total = CART.getCheckedTotal();
+
+    document.getElementById('selectAllCheckbox').checked = allChecked;
+    document.getElementById('cartTotalPrice').textContent = formatPrice(total);
+    document.getElementById('cartCheckedCount').textContent =
+      '已选 ' + checkedItems.length + ' 件';
+
+    var checkoutBtn = document.getElementById('checkoutBtn');
+    checkoutBtn.disabled = checkedItems.length === 0;
+    if (checkedItems.length === 0) {
+      checkoutBtn.textContent = '请选择商品';
+    } else {
+      checkoutBtn.textContent = '去结算 (' + checkedItems.length + ')';
+    }
+  }
+
+  /* ==================== Events ==================== */
+  function bindCartEvents() {
+    // Item checkbox
+    var itemCheckboxes = document.querySelectorAll('.item-checkbox');
+    for (var i = 0; i < itemCheckboxes.length; i++) {
+      itemCheckboxes[i].onchange = function () {
+        var key = this.getAttribute('data-item-key');
+        if (key) {
+          CART.toggleCheck(key);
+          renderCart();
+        }
+      };
+    }
+
+    // Shop checkbox
+    var shopCheckboxes = document.querySelectorAll('.shop-checkbox');
+    for (var j = 0; j < shopCheckboxes.length; j++) {
+      shopCheckboxes[j].onchange = function () {
+        var shopKey = this.getAttribute('data-shop-key');
+        var checked = this.checked;
+        var items = CART.getItems();
+        for (var k = 0; k < items.length; k++) {
+          var itemShopId = items[k].shopId != null ? String(items[k].shopId) : '__none__';
+          if (itemShopId === shopKey) {
+            if (items[k].checked !== checked) {
+              CART.toggleCheck(items[k].key);
+            }
+          }
+        }
+        renderCart();
+      };
+    }
+
+    // Quantity minus
+    var minusBtns = document.querySelectorAll('.qty-minus');
+    for (var m = 0; m < minusBtns.length; m++) {
+      minusBtns[m].onclick = function () {
+        var key = this.getAttribute('data-item-key');
+        if (!key) return;
+        var items = CART.getItems();
+        var item = items.find(function (i) { return i.key === key; });
+        if (item && item.quantity > 1) {
+          CART.updateQty(key, item.quantity - 1);
+          renderCart();
+        }
+      };
+    }
+
+    // Quantity plus
+    var plusBtns = document.querySelectorAll('.qty-plus');
+    for (var p = 0; p < plusBtns.length; p++) {
+      plusBtns[p].onclick = function () {
+        var key = this.getAttribute('data-item-key');
+        if (!key) return;
+        var items = CART.getItems();
+        var item = items.find(function (i) { return i.key === key; });
+        if (item) {
+          CART.updateQty(key, item.quantity + 1);
+          renderCart();
+        }
+      };
+    }
+
+    // Delete button
+    var delBtns = document.querySelectorAll('.cart-item-del');
+    for (var d = 0; d < delBtns.length; d++) {
+      delBtns[d].onclick = function () {
+        var key = this.getAttribute('data-item-key');
+        if (!key) return;
+        CART.remove(key);
+        showToast('已移除商品', 'info');
+        renderCart();
+      };
+    }
+
+    // Clear stale items
+    var clearStaleBtn = document.getElementById('clearStaleBtn');
+    if (clearStaleBtn) {
+      clearStaleBtn.onclick = function () {
+        var all = CART.getItems();
+        var staleKeys = [];
+        for (var si = 0; si < all.length; si++) {
+          if (isStale(all[si])) staleKeys.push(all[si].key);
+        }
+        if (staleKeys.length === 0) return;
+        CART.saveItems(all.filter(function(i) { return staleKeys.indexOf(i.key) === -1; }));
+        showToast('已清空 ' + staleKeys.length + ' 件失效商品', 'info');
+        renderCart();
+      };
+    }
+
+    // Footer: select all
+    var selectAllCb = document.getElementById('selectAllCheckbox');
+    if (selectAllCb) {
+      selectAllCb.onchange = function () {
+        CART.toggleAll(this.checked);
+        renderCart();
+      };
+    }
+
+    // Footer: remove checked
+    var removeCheckedBtn = document.getElementById('removeCheckedBtn');
+    if (removeCheckedBtn) {
+      removeCheckedBtn.onclick = function () {
+        var checkedItems = CART.getCheckedItems();
+        if (checkedItems.length === 0) {
+          showToast('请先选择要删除的商品', 'warning');
+          return;
+        }
+        CART.removeChecked();
+        showToast('已删除选中商品', 'info');
+        renderCart();
+      };
+    }
+
+    // Footer: checkout
+    var checkoutBtn = document.getElementById('checkoutBtn');
+    if (checkoutBtn) {
+      checkoutBtn.onclick = function () {
+        var checkedItems = CART.getCheckedItems();
+        if (checkedItems.length === 0) {
+          showToast('请先选择要结算的商品', 'warning');
+          return;
+        }
+        if (!AUTH.isLoggedIn()) {
+          location.href = '/login.html?redirect=' + encodeURIComponent('/checkout.html');
+          return;
+        }
+        location.href = '/checkout.html';
+      };
+    }
+  }
+
+  /* ==================== Helpers ==================== */
+  function escHtml(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function escAttr(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
+
+  /* ==================== Init ==================== */
+  document.addEventListener('DOMContentLoaded', function () {
+    renderNavbar('cart');
+    initMobileNav('cart');
+    renderCart();
+  });
+
+})();
+</script>
+
+</body>
+</html>

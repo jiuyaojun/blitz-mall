@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>登录 / 注册 — Blitz 智能商城</title>
+  <link rel="stylesheet" href="/css/common.css">
+</head>
+<body>
+
+<div class="login-page">
+
+  <!-- ========== Left: Brand Showcase ========== -->
+  <div class="login-left">
+    <div class="brand-content">
+      <div class="brand-logo">⚡</div>
+      <div class="brand-name">Blitz 智能商城</div>
+      <p class="brand-tagline">
+        新一代电商平台，高性能秒杀引擎<br>
+        极致的购物体验，从这里开始
+      </p>
+      <div class="brand-features">
+        <div class="brand-feature">
+          <span class="feat-icon">⚡</span>
+          <span>秒杀引擎</span>
+        </div>
+        <div class="brand-feature">
+          <span class="feat-icon">🛡️</span>
+          <span>安全可靠</span>
+        </div>
+        <div class="brand-feature">
+          <span class="feat-icon">📦</span>
+          <span>品类齐全</span>
+        </div>
+        <div class="brand-feature">
+          <span class="feat-icon">🚀</span>
+          <span>极致体验</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== Right: Form Card ========== -->
+  <div class="login-right">
+    <div class="form-card" id="formCard">
+
+      <!-- Tabs -->
+      <div class="form-tabs">
+        <button class="form-tab active" id="tabLogin" type="button">登录</button>
+        <button class="form-tab" id="tabRegister" type="button">注册</button>
+      </div>
+
+      <!-- ====== Login Form ====== -->
+      <form id="loginForm" autocomplete="off" novalidate>
+        <div class="form-group">
+          <label class="form-label">用户名 <span class="required">*</span></label>
+          <input type="text" class="form-input" id="loginUsername" placeholder="请输入用户名" autocomplete="username">
+          <div class="form-error" id="loginUsernameError"></div>
+        </div>
+        <div class="form-group" style="position:relative">
+          <label class="form-label">密码 <span class="required">*</span></label>
+          <input type="password" class="form-input" id="loginPassword" placeholder="请输入密码（至少6位）" autocomplete="current-password" style="padding-right:42px">
+          <button type="button" class="pwd-toggle" data-target="loginPassword" style="position:absolute;right:10px;top:34px;background:none;border:none;cursor:pointer;font-size:1.1rem;color:var(--text-muted)">👁</button>
+          <div class="form-error" id="loginPasswordError"></div>
+        </div>
+        <button type="submit" class="btn btn-primary btn-lg btn-block" id="loginSubmitBtn">登 录</button>
+      </form>
+
+      <!-- ====== Register Form (hidden initially) ====== -->
+      <form id="registerForm" autocomplete="off" novalidate style="display:none">
+        <div class="form-group">
+          <label class="form-label">用户名 <span class="required">*</span></label>
+          <input type="text" class="form-input" id="regUsername" placeholder="请输入用户名" autocomplete="username">
+          <div class="form-error" id="regUsernameError"></div>
+        </div>
+        <div class="form-group" style="position:relative">
+          <label class="form-label">密码 <span class="required">*</span></label>
+          <input type="password" class="form-input" id="regPassword" placeholder="请输入密码（至少6位）" autocomplete="new-password" style="padding-right:42px">
+          <button type="button" class="pwd-toggle" data-target="regPassword" style="position:absolute;right:10px;top:34px;background:none;border:none;cursor:pointer;font-size:1.1rem;color:var(--text-muted)">👁</button>
+          <div class="form-error" id="regPasswordError"></div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">确认密码 <span class="required">*</span></label>
+          <input type="password" class="form-input" id="regPassword2" placeholder="请再次输入密码" autocomplete="new-password">
+          <div class="form-error" id="regPassword2Error"></div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">邮箱</label>
+          <input type="email" class="form-input" id="regEmail" placeholder="请输入邮箱（选填）" autocomplete="email">
+          <div class="form-error" id="regEmailError"></div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">手机号</label>
+          <input type="tel" class="form-input" id="regPhone" placeholder="请输入手机号（选填）" autocomplete="tel">
+          <div class="form-error" id="regPhoneError"></div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">邀请码</label>
+          <input type="text" class="form-input" id="regInviteCode" placeholder="请输入邀请码（选填）">
+          <div class="form-error" id="regInviteCodeError"></div>
+        </div>
+        <button type="submit" class="btn btn-primary btn-lg btn-block" id="registerSubmitBtn">注 册</button>
+      </form>
+
+      <!-- Switch link -->
+      <div class="switch-link" id="switchLinkText">
+        还没有账号？<span id="switchToRegister">立即注册</span>
+      </div>
+
+      <!-- Demo hint -->
+      <div class="form-hint" id="demoHint">
+        <strong>💡 测试账号：</strong>
+        <div style="margin-top:4px;">
+          管理员：<code>demo</code> / <code>Demo123456</code><br>
+          商家：<code>shop1</code> / <code>Shop123456</code><br>
+          买家：<code>test</code> / <code>User123456</code>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<!-- ================================================================
+     Scripts
+     ================================================================ -->
+<script src="/js/api.js"></script>
+<script src="/js/common.js"></script>
+<script>
+(function() {
+  'use strict';
+
+  /* ================================================================
+     1. Already logged in? Redirect away immediately
+     ================================================================ */
+  if (AUTH.isLoggedIn()) {
+    redirectByRole();
+    return;
+  }
+
+  /* ================================================================
+     2. State
+     ================================================================ */
+  var mode = 'login'; // 'login' | 'register'
+
+  /* ================================================================
+     3. DOM References
+     ================================================================ */
+  var tabLogin    = document.getElementById('tabLogin');
+  var tabRegister = document.getElementById('tabRegister');
+  var loginForm   = document.getElementById('loginForm');
+  var registerForm = document.getElementById('registerForm');
+  var switchLinkText = document.getElementById('switchLinkText');
+
+  // Login inputs
+  var loginUsername      = document.getElementById('loginUsername');
+  var loginPassword      = document.getElementById('loginPassword');
+  var loginUsernameError = document.getElementById('loginUsernameError');
+  var loginPasswordError = document.getElementById('loginPasswordError');
+  var loginSubmitBtn     = document.getElementById('loginSubmitBtn');
+
+  // Register inputs
+  var regUsername       = document.getElementById('regUsername');
+  var regPassword       = document.getElementById('regPassword');
+  var regEmail          = document.getElementById('regEmail');
+  var regPhone          = document.getElementById('regPhone');
+  var regInviteCode     = document.getElementById('regInviteCode');
+  var regUsernameError  = document.getElementById('regUsernameError');
+  var regPasswordError  = document.getElementById('regPasswordError');
+  var regEmailError     = document.getElementById('regEmailError');
+  var regPhoneError     = document.getElementById('regPhoneError');
+  var regInviteCodeError = document.getElementById('regInviteCodeError');
+  var registerSubmitBtn = document.getElementById('registerSubmitBtn');
+
+  // Demo hint
+  var demoHint = document.getElementById('demoHint');
+
+  /* ================================================================
+     4. Tab switching
+     ================================================================ */
+  function switchMode(newMode) {
+    mode = newMode;
+    clearAllErrors();
+
+    if (mode === 'login') {
+      tabLogin.classList.add('active');
+      tabRegister.classList.remove('active');
+      loginForm.style.display = '';
+      registerForm.style.display = 'none';
+      switchLinkText.innerHTML = '还没有账号？<span id="switchToRegister">立即注册</span>';
+      document.getElementById('switchToRegister').addEventListener('click', function() {
+        switchMode('register');
+      });
+      demoHint.style.display = '';
+    } else {
+      tabRegister.classList.add('active');
+      tabLogin.classList.remove('active');
+      registerForm.style.display = '';
+      loginForm.style.display = 'none';
+      switchLinkText.innerHTML = '已有账号？<span id="switchToLogin">立即登录</span>';
+      document.getElementById('switchToLogin').addEventListener('click', function() {
+        switchMode('login');
+      });
+      demoHint.style.display = 'none';
+    }
+  }
+
+  tabLogin.addEventListener('click', function() { switchMode('login'); });
+  tabRegister.addEventListener('click', function() { switchMode('register'); });
+  document.getElementById('switchToRegister').addEventListener('click', function() {
+    switchMode('register');
+  });
+
+  /* ================================================================
+     5. Validation helpers
+     ================================================================ */
+  function clearAllErrors() {
+    var errors = document.querySelectorAll('.form-error');
+    errors.forEach(function(el) { el.classList.remove('show'); el.textContent = ''; });
+    var inputs = document.querySelectorAll('.form-input');
+    inputs.forEach(function(el) { el.classList.remove('input-error'); });
+  }
+
+  function showFieldError(inputEl, errorEl, msg) {
+    inputEl.classList.add('input-error');
+    errorEl.textContent = msg;
+    errorEl.classList.add('show');
+  }
+
+  function clearFieldError(inputEl, errorEl) {
+    inputEl.classList.remove('input-error');
+    errorEl.classList.remove('show');
+    errorEl.textContent = '';
+  }
+
+  function validateUsername(val) {
+    if (!val || val.trim() === '') return '请输入用户名';
+    if (val.trim().length < 2) return '用户名至少2个字符';
+    return null;
+  }
+
+  function validatePassword(val) {
+    if (!val || val.trim() === '') return '请输入密码';
+    if (val.trim().length < 6) return '密码至少6位';
+    return null;
+  }
+
+  function validateEmail(val) {
+    if (!val || val.trim() === '') return null; // optional
+    var re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!re.test(val.trim())) return '邮箱格式不正确';
+    return null;
+  }
+
+  function validatePhone(val) {
+    if (!val || val.trim() === '') return null; // optional
+    var re = /^1[3-9]\d{9}$/;
+    if (!re.test(val.trim())) return '手机号格式不正确（11位）';
+    return null;
+  }
+
+  /* ================================================================
+     6. Submit button loading state
+     ================================================================ */
+  function setBtnLoading(btn, loading) {
+    if (loading) {
+      btn._origText = btn.textContent;
+      btn.textContent = '处理中...';
+      btn.disabled = true;
+    } else {
+      btn.disabled = false;
+      btn.textContent = btn._origText || btn.textContent;
+    }
+  }
+
+  /* ================================================================
+     7. Login submit
+     ================================================================ */
+  loginForm.addEventListener('submit', function(e) {
+    e.preventDefault();
+    clearAllErrors();
+
+    var username = loginUsername.value;
+    var password = loginPassword.value;
+
+    var uErr = validateUsername(username);
+    var pErr = validatePassword(password);
+    var hasError = false;
+
+    if (uErr) { showFieldError(loginUsername, loginUsernameError, uErr); hasError = true; }
+    if (pErr) { showFieldError(loginPassword, loginPasswordError, pErr); hasError = true; }
+    if (hasError) return;
+
+    setBtnLoading(loginSubmitBtn, true);
+
+    api.login(username.trim(), password.trim())
+      .then(function(result) {
+        var data = result.data || {};
+        // Save token
+        if (data.token) {
+          AUTH.setToken(data.token);
+        }
+        // Save user if provided in response
+        if (data.user) {
+          AUTH.setUser(data.user);
+        } else if (data.username && AUTH.isLoggedIn()) {
+          // data itself might be the user object
+          AUTH.setUser(data);
+        }
+        // If we have a token but no user info, try fetching it
+        if (AUTH.isLoggedIn() && !AUTH.getUser()) {
+          return fetchUser().then(function() { return result; });
+        }
+        return result;
+      })
+      .then(function() {
+        showToast('登录成功', 'success');
+        setTimeout(function() {
+          redirectByRole();
+        }, 600);
+      })
+      .catch(function(err) {
+        showToast(err.message || '登录失败，请检查用户名和密码', 'error');
+      })
+      .finally(function() {
+        setBtnLoading(loginSubmitBtn, false);
+      });
+  });
+
+  /* ================================================================
+     8. Register submit
+     ================================================================ */
+  registerForm.addEventListener('submit', function(e) {
+    e.preventDefault();
+    clearAllErrors();
+
+    var username   = regUsername.value;
+    var password   = regPassword.value;
+    var password2  = document.getElementById('regPassword2').value;
+    var email      = regEmail.value;
+    var phone      = regPhone.value;
+    var inviteCode = regInviteCode.value;
+
+    var uErr  = validateUsername(username);
+    var pErr  = validatePassword(password);
+    var p2Err = password !== password2 ? '两次密码不一致' : null;
+    var eErr  = validateEmail(email);
+    var phErr = validatePhone(phone);
+    var p2ErrorEl = document.getElementById('regPassword2Error');
+    var p2Input   = document.getElementById('regPassword2');
+    var hasError = false;
+
+    if (uErr)  { showFieldError(regUsername, regUsernameError, uErr); hasError = true; }
+    if (pErr)  { showFieldError(regPassword, regPasswordError, pErr); hasError = true; }
+    if (p2Err) { showFieldError(p2Input, p2ErrorEl, p2Err); hasError = true; }
+    if (eErr)  { showFieldError(regEmail, regEmailError, eErr); hasError = true; }
+    if (phErr) { showFieldError(regPhone, regPhoneError, phErr); hasError = true; }
+    if (hasError) return;
+
+    setBtnLoading(registerSubmitBtn, true);
+
+    api.register(
+      username.trim(),
+      password.trim(),
+      email.trim() || null,
+      phone.trim() || null,
+      inviteCode.trim() || null
+    )
+      .then(function() {
+        showToast('注册成功，请登录', 'success');
+        registerForm.reset();
+        switchMode('login');
+        loginUsername.value = username.trim();
+      })
+      .catch(function(err) {
+        showToast(err.message || '注册失败，请重试', 'error');
+      })
+      .finally(function() {
+        setBtnLoading(registerSubmitBtn, false);
+      });
+  });
+
+  /* ================================================================
+     9. Live field validation (clear error on input)
+     ================================================================ */
+  loginUsername.addEventListener('input', function() {
+    clearFieldError(loginUsername, loginUsernameError);
+  });
+  loginPassword.addEventListener('input', function() {
+    clearFieldError(loginPassword, loginPasswordError);
+  });
+  regUsername.addEventListener('input', function() {
+    clearFieldError(regUsername, regUsernameError);
+  });
+  regPassword.addEventListener('input', function() {
+    clearFieldError(regPassword, regPasswordError);
+  });
+  regEmail.addEventListener('input', function() {
+    clearFieldError(regEmail, regEmailError);
+  });
+  regPhone.addEventListener('input', function() {
+    clearFieldError(regPhone, regPhoneError);
+  });
+  regInviteCode.addEventListener('input', function() {
+    clearFieldError(regInviteCode, regInviteCodeError);
+  });
+
+  /* ================================================================
+     10. Role-based redirect
+     ================================================================ */
+  function redirectByRole() {
+    var role = AUTH.getRole();
+    if (role === 'ADMIN') {
+      location.href = '/admin.html';
+    } else if (role === 'MERCHANT') {
+      location.href = '/merchant.html';
+    } else {
+      var redirect = getQueryParam('redirect');
+      location.href = redirect || '/';
+    }
+  }
+
+  /* ================================================================
+     11. Password Toggle
+     ================================================================ */
+  document.querySelectorAll('.pwd-toggle').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var input = document.getElementById(this.getAttribute('data-target'));
+      if (input.type === 'password') { input.type = 'text'; this.textContent = '🙈'; }
+      else { input.type = 'password'; this.textContent = '👁'; }
+    });
+  });
+
+  /* ================================================================
+     12. Init
+     ================================================================ */
+  switchMode('login');
+
+})();
+</script>
+
+</body>
+</html>

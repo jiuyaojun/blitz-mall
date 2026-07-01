@@ -15,6 +15,7 @@ import java.util.Base64;
  */
 @Slf4j
 @Service
+@org.springframework.context.annotation.Profile("!minimal")
 public class SeckillPathService {
 
     private final HMac hMac;
@@ -22,7 +23,7 @@ public class SeckillPathService {
     /** 路径有效期 60 秒 */
     private static final long PATH_EXPIRE_SECONDS = 60;
 
-    public SeckillPathService(@Value("${blitz.seckill.path-secret:BlitzSeckillPathSecret2026}") String secret) {
+    public SeckillPathService(@Value("${blitz.seckill.path-secret}") String secret) {
         this.hMac = new HMac(HmacAlgorithm.HmacSHA256, secret.getBytes(StandardCharsets.UTF_8));
     }
 

@@ -21,7 +21,8 @@ CREATE TABLE IF NOT EXISTS `order` (
     deleted INT DEFAULT 0,
     INDEX idx_user_id (user_id),
     INDEX idx_order_no (order_no),
-    INDEX idx_status (status)
+    INDEX idx_status (status),
+    INDEX idx_user_status (user_id, status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS order_item (

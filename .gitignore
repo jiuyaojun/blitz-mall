@@ -7,3 +7,27 @@ target/
 .settings/
 .project
 .classpath
+
+# Environment & secrets
+.env
+.env.*
+!.env.example
+application-minimal.yml
+
+# IDE
+.vscode/
+.superpowers/
+docs/superpowers/
+
+# Docker
+docker-data/
+
+# Runtime
+*.pid
+nohup.out
+*.orig
+*.bak
+
+# OS
+Thumbs.db
+.DS_Store

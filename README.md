@@ -229,6 +229,10 @@ This starts:
 ### Step 2: Build
 
 ```bash
+# Normal build (with tests)
+mvn clean install
+
+# Development-only build (skip tests for faster iteration)
 mvn clean install -DskipTests
 ```
 
