@@ -47,6 +47,7 @@ public class SeckillWebSocketHandler extends TextWebSocketHandler {
                 Long uid = getUserId(session);
                 if (uid != null) userSessions.remove(uid);
             }
+        }
     }
 
     /** 推送秒杀结果给指定用户 */

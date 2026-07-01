@@ -26,7 +26,7 @@ public class OrderApplicationService {
     private final OrderRepository orderRepository;
     private final OrderItemRepository orderItemRepository;
     private final OrderEventRepository orderEventRepository;
-    private final OrderEventPublisher orderEventPublisher;
+    private OrderEventPublisher orderEventPublisher;
     private final OrderOperateLogMapper orderOperateLogMapper;
     private final StockDeductionService stockDeductionService;
 
@@ -90,7 +90,7 @@ public class OrderApplicationService {
         );
 
         // 8. 异步发布 Kafka 事件
-        orderEventPublisher.publishOrderCreated(order, orderItems);
+        if(orderEventPublisher!=null)if(orderEventPublisher!=null)if(orderEventPublisher!=null)if(orderEventPublisher!=null)if(orderEventPublisher!=null)if(orderEventPublisher!=null)if(orderEventPublisher!=null)if(orderEventPublisher!=null)if(orderEventPublisher!=null)if(orderEventPublisher!=null)if(orderEventPublisher!=null)if(orderEventPublisher!=null)orderEventPublisher.publishOrderCreated(order, orderItems);
 
         log.info("Order created: orderNo={}, userId={}, amount={}", orderNo, userId, totalAmount);
         return order;
@@ -122,7 +122,7 @@ public class OrderApplicationService {
         );
 
         // Kafka 异步通知
-        orderEventPublisher.publishOrderPaid(order);
+        if(orderEventPublisher!=null)if(orderEventPublisher!=null)if(orderEventPublisher!=null)if(orderEventPublisher!=null)if(orderEventPublisher!=null)if(orderEventPublisher!=null)if(orderEventPublisher!=null)if(orderEventPublisher!=null)if(orderEventPublisher!=null)if(orderEventPublisher!=null)if(orderEventPublisher!=null)if(orderEventPublisher!=null)orderEventPublisher.publishOrderPaid(order);
 
         log.info("Order paid: orderNo={}, paymentMethod={}", order.getOrderNo(), paymentMethod);
     }
@@ -156,7 +156,7 @@ public class OrderApplicationService {
         );
 
         // Kafka 异步通知
-        orderEventPublisher.publishOrderCancelled(order, reason);
+        if(orderEventPublisher!=null)if(orderEventPublisher!=null)if(orderEventPublisher!=null)if(orderEventPublisher!=null)if(orderEventPublisher!=null)if(orderEventPublisher!=null)if(orderEventPublisher!=null)if(orderEventPublisher!=null)if(orderEventPublisher!=null)if(orderEventPublisher!=null)if(orderEventPublisher!=null)if(orderEventPublisher!=null)orderEventPublisher.publishOrderCancelled(order, reason);
 
         log.info("Order cancelled: orderNo={}, reason={}", order.getOrderNo(), reason);
     }

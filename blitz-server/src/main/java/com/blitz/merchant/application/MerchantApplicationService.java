@@ -64,7 +64,9 @@ public class MerchantApplicationService {
     /** Get dashboard stats for a merchant */
     public Map<String, Object> getDashboard(Long userId) {
         Shop shop = getShop(userId);
-        List<Product> products = productRepository.findByShopId(shop.getId());
+        List<Product> products = productRepository.findAll().stream()
+            .filter(p -> shop.getId().equals(p.getShopId()))
+            .toList();
         int productCount = products.size();
         int onSaleCount = (int) products.stream().filter(p -> p.getStatus() != null && p.getStatus() == 1).count();
         int totalSales = products.stream().mapToInt(p -> p.getSaleCount() != null ? p.getSaleCount() : 0).sum();
@@ -80,7 +82,9 @@ public class MerchantApplicationService {
     /** List merchant's products */
     public List<ProductVO> listProducts(Long userId) {
         Shop shop = getShop(userId);
-        List<Product> products = productRepository.findByShopId(shop.getId());
+        List<Product> products = productRepository.findAll().stream()
+            .filter(p -> shop.getId().equals(p.getShopId()))
+            .toList();
         return products.stream().map(this::toVO).toList();
     }
 
@@ -153,7 +157,11 @@ public class MerchantApplicationService {
             skuStockRepository.deleteBySkuId(sku.getId());
         }
         skuRepository.deleteByProductId(productId);
-        productRepository.deleteById(productId);
+        // Logical delete — save with deleted flag; MyBatis-Plus @TableLogic handles the rest
+        Product deletedProduct = productRepository.findById(productId)
+            .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+        deletedProduct.setDeleted(1);
+        productRepository.save(deletedProduct);
     }
 
     /** Toggle product on/off sale */
@@ -178,7 +186,7 @@ public class MerchantApplicationService {
         for (Sku sku : skus) {
             Integer stock = skuStockRepository.findBySkuId(sku.getId())
                 .map(SkuStock::getStock).orElse(0);
-            skuDTOs.add(new SkuDTO(sku.getId(), sku.getName(), sku.getSpecMap(), sku.getPrice(), stock));
+            skuDTOs.add(new SkuDTO(sku.getName(), sku.getSpecMap(), sku.getPrice(), stock));
             if (minPrice == null || (sku.getPrice() != null && sku.getPrice().compareTo(minPrice) < 0)) {
                 minPrice = sku.getPrice();
                 defaultSkuId = sku.getId();
@@ -186,9 +194,7 @@ public class MerchantApplicationService {
         }
         return new ProductVO(
             product.getId(), product.getName(), product.getCategoryId(),
-            product.getBrand(), product.getStatus(), minPrice, null,
-            product.getMainImage(), product.getDescription(),
-            product.getSaleCount(), defaultSkuId, skuDTOs, product.getCreateTime()
+            product.getBrand(), product.getStatus(), skuDTOs, product.getCreateTime()
         );
     }
 

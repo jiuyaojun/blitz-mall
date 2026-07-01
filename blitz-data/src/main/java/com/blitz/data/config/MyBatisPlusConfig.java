@@ -4,14 +4,35 @@ import com.baomidou.mybatisplus.annotation.DbType;
 import com.baomidou.mybatisplus.core.handlers.MetaObjectHandler;
 import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
+import com.baomidou.mybatisplus.extension.spring.MybatisSqlSessionFactoryBean;
 import org.apache.ibatis.reflection.MetaObject;
+import org.apache.ibatis.session.SqlSessionFactory;
+import org.mybatis.spring.SqlSessionTemplate;
+import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 
+import javax.sql.DataSource;
 import java.time.LocalDateTime;
 
 @Configuration
+@MapperScan({"com.blitz.product.infrastructure.mapper","com.blitz.order.infrastructure.mapper","com.blitz.user.infrastructure.mapper","com.blitz.seckill.infrastructure.mapper","com.blitz.ai.infrastructure.mapper","com.blitz.review"})
 public class MyBatisPlusConfig {
+
+    @Bean
+    @Primary
+    public SqlSessionFactory sqlSessionFactory(DataSource dataSource) throws Exception {
+        MybatisSqlSessionFactoryBean factory = new MybatisSqlSessionFactoryBean();
+        factory.setDataSource(dataSource);
+        return factory.getObject();
+    }
+
+    @Bean
+    @Primary
+    public SqlSessionTemplate sqlSessionTemplate(SqlSessionFactory sqlSessionFactory) {
+        return new SqlSessionTemplate(sqlSessionFactory);
+    }
 
     @Bean
     public MybatisPlusInterceptor mybatisPlusInterceptor() {

@@ -81,21 +81,16 @@ public class ReviewController {
     public Result<Map<String, Object>> stats(@PathVariable Long productId) {
         LambdaQueryWrapper<Review> qw = new LambdaQueryWrapper<>();
         qw.eq(Review::getProductId, productId);
-        Long total = reviewMapper.selectCount(qw);
-        // Use a single GROUP BY query instead of N+1 individual COUNT queries
-        List<Map<String, Object>> ratingCounts = reviewMapper.selectMaps(
-            new LambdaQueryWrapper<Review>()
-                .select(Review::getRating, com.baomidou.mybatisplus.core.toolkit.Wrappers.lambdaQuery(Review.class).apply("COUNT(*) as cnt"))
-                .eq(Review::getProductId, productId)
-                .groupBy(Review::getRating));
+        // Single query: fetch all reviews, compute stats in memory
+        java.util.List<Review> all = reviewMapper.selectList(qw);
+        long total = all.size();
         long[] counts = new long[6];
         double avg = 0;
-        for (Map<String, Object> row : ratingCounts) {
-            int r = ((Number) row.get("rating")).intValue();
-            long c = ((Number) row.get("cnt")).longValue();
-            if (r >= 1 && r <= 5) {
-                counts[r] = c;
-                avg += r * c;
+        for (Review r : all) {
+            int rating = r.getRating();
+            if (rating >= 1 && rating <= 5) {
+                counts[rating]++;
+                avg += rating;
             }
         }
         if (total > 0) avg /= total;

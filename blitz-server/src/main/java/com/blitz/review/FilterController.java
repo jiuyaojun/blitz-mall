@@ -41,11 +41,13 @@ public class FilterController {
         // Batch-fetch all SKUs at once for price filtering and enrichment
         List<Product> allProducts = productMapper.selectList(qw);
         List<Long> allProductIds = allProducts.stream().map(Product::getId).toList();
-        Map<Long, List<Sku>> skuMap = Collections.emptyMap();
+        final Map<Long, List<Sku>> skuMap;
         if (!allProductIds.isEmpty()) {
             List<Sku> allSkus = skuMapper.selectList(
                 new LambdaQueryWrapper<Sku>().in(Sku::getProductId, allProductIds));
             skuMap = allSkus.stream().collect(Collectors.groupingBy(Sku::getProductId));
+        } else {
+            skuMap = Collections.emptyMap();
         }
 
         // Price filter: check against min SKU price using pre-fetched data
