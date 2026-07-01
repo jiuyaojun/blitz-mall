@@ -2,6 +2,7 @@ package com.blitz.ai.infrastructure.llm;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Profile;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.prompt.PromptTemplate;
 import org.springframework.core.io.ClassPathResource;
@@ -19,6 +20,7 @@ import java.util.Map;
  */
 @Slf4j
 @Service
+@Profile("!minimal")
 @RequiredArgsConstructor
 public class StreamingChatService {
 

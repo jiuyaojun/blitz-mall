@@ -24,7 +24,7 @@ import java.util.Map;
 @Profile("minimal")
 public class SimpleAiController {
 
-    @Value("${OPENAI_API_KEY}")
+    @Value("${OPENAI_API_KEY:sk-demo}")
     private String apiKey;
 
     @Value("${OPENAI_BASE_URL:https://open.bigmodel.cn/api/paas/v4}")
