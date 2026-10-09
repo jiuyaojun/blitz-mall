@@ -1,8 +1,7 @@
 # Blitz 智能商城
 
 > **AI-Integrated High-Concurrency E-Commerce Platform**  
-> Java 21 + Spring Boot 4.0 + Spring AI 2.0 -- Graduation Project
-
+> Java 17 + Spring Boot 4.0 + Spring AI 2.0 -- Blitz Smart Mall
 [![Java](https://img.shields.io/badge/Java-21-%23ED8B00?logo=openjdk&logoColor=white)](https://openjdk.org/projects/jdk/21/)
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.0.0-%236DB33F?logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot)
 [![Spring AI](https://img.shields.io/badge/Spring%20AI-2.0.0-%236DB33F?logo=spring&logoColor=white)](https://spring.io/projects/spring-ai)
@@ -74,6 +73,13 @@
     +-------------------+        +--------------------+
 ```
 
+> ⚠️ **关于上面这张架构图**：它画的是**完整设计的中间件层**，不是当前运行的形态。
+> 实际以 `application-minimal.yml` 的 `autoconfigure.exclude` 为准 ——
+> 当前 **Sentinel、Seata、Redisson、Spring AI、PgVector 均未启用**，
+> Kafka 链路在 minimal profile 下也是断开的（`go.sh` 把 `OrderEventPublisher`
+> 改成了可空以容忍缺失）。
+> 判断某个能力能不能用，请以配置和代码为准，不要以架构图为依据。
+
 ---
 
 ## 2. Key Features
@@ -84,7 +90,7 @@
 |------|-------|--------|------|
 | 1 | Client | Request dynamic path from server | REST |
 | 2 | Server | HMAC-signed path generation + validation | HMAC-SHA256 |
-| 3 | Server | Sentinel rate limiting at API level | Sentinel |
+| 3 | Server | Sentinel rate limiting at API level | Sentinel（⚠️ 规则已配，但全工程无 `@SentinelResource` 切点，实际不生效） |
 | 4 | Server | Redisson per-user rate limit (1 QPS) | Redisson |
 | 5 | Server | Redis fast-fail sold-out check | Redis GET |
 | 6 | Server | **Lua atomic pre-deduct stock + duplicate prevention** | Redis Lua |
@@ -120,7 +126,7 @@
 
 | Category | Technology | Version | Purpose |
 |----------|-----------|---------|---------|
-| **Language** | Java | 21 | Virtual Threads, Pattern Matching |
+| **Language** | Java | 17 | 见 pom.xml 的 java.version；虚拟线程配置在 17 下不生效 |
 | **Framework** | Spring Boot | 4.0.0 | Application framework |
 | **AI** | Spring AI | 2.0.0 | ChatClient, VectorStore, Embedding |
 | **Security** | Spring Security + JJWT | 6.x / 0.12.6 | JWT stateless auth |
@@ -129,8 +135,8 @@
 | **Vector DB** | PostgreSQL + pgvector | 16 | AI embeddings + hybrid search |
 | **Cache** | Redis + Redisson | 7.2 / 3.42 | Distributed lock, Lua, rate limit |
 | **MQ** | Apache Kafka | 3.6 | Async order events |
-| **Flow Control** | Sentinel | 2025.0.0.0 | Rate limiting |
-| **Dist. TX** | Seata AT | 2025.0.0.0 | Distributed transactions |
+| **Flow Control** | Sentinel（未启用） | 2025.0.0.0 | 规则已配置，但全工程无 `@SentinelResource` 切点，限流不生效 |
+| **Dist. TX** | Seata（未启用） | 2025.0.0.0 | 全 profile `seata.enabled: false`，无 `@GlobalTransactional` |
 | **Migration** | Flyway | (Spring Boot managed) | Schema versioning |
 | **API Docs** | Knife4j | 4.5.0 | OpenAPI 3 UI at /doc.html |
 | **Utilities** | Hutool | 5.8.35 | All-in-one toolset |
@@ -208,7 +214,7 @@ src/main/java/com/blitz/<context>/
 
 ### Prerequisites
 
-- JDK 21+
+- JDK 17+
 - Docker Desktop (or Docker Engine + Compose)
 - Maven 3.8+
 - OpenAI-compatible API key (for AI module)
@@ -306,7 +312,7 @@ Client                  Server                  Redis              Kafka        
   │                       │                       │                  │                   │                    │                 │
   │  ③ POST /seckill/exec │                       │                  │                   │                    │                 │
   │ ─────────────────────>│                       │                  │                   │                    │                 │
-  │                       │── ④ Sentinel QPS ────>│                  │                   │                    │                 │
+  │                       │── ④ Sentinel off ────>│                  │                   │                    │                 │
   │                       │── ⑤ Redisson Rate ───>│                  │                   │                    │                 │
   │                       │── ⑥ Lua Deduct ──────>│                  │                   │                    │                 │
   │                       │     (KEYS: stock +    │                  │                   │                    │                 │
@@ -476,9 +482,13 @@ A: Direct MySQL writes at seckill concurrency would saturate connection pools. K
 
 A: Manual offset commit (commit after successful MySQL write). If the consumer crashes mid-process, the message is re-delivered. Idempotency is guaranteed by MySQL `UNIQUE KEY uk_user_seckill (user_id, seckill_product_id)` -- duplicate inserts raise `DuplicateKeyException`, which the consumer catches and ACKs silently.
 
-### Q: What's the benefit of Java 21 Virtual Threads here?
+### Q: 配置里开了 `spring.threads.virtual.enabled: true`，虚拟线程起什么作用？
 
-A: Virtual threads eliminate the thread-pool bottleneck. Each HTTP request, Kafka consumer, and WebSocket connection gets its own virtual thread without the 1:1 OS thread cost. In a seckill scenario with 10,000 concurrent requests, traditional thread pools would queue or reject; virtual threads handle all 10,000 concurrently on a handful of platform threads.
+A: **在当前构建里这个配置不生效。** 虚拟线程需要 Java 21+，而工程实际的
+`java.version` 是 17，Spring Boot 会静默忽略这个属性 —— 也就是说这条
+"卖点"目前是空的。把基线升到 Java 21 之后再谈收益才成立；在此之前，
+并发能力取决于平台线程池。本项目没有跑过秒杀并发压测，因此也没有
+实测数据可以对比。
 
 ---
 
@@ -741,7 +751,7 @@ blitz/
     │   └── controller/
     │       └── HealthController.java            # /api/health endpoint
     └── src/main/resources/
-        ├── application.yml                      # Server port + virtual threads
+        ├── application.yml                      # 服务端口等通用配置（虚拟线程配置在 Java 17 下不生效）
         ├── application-dev.yml                  # Datasource, Flyway, Kafka, Redis, JWT, Knife4j
         ├── application-ai.yml                   # Spring AI OpenAI config + PG datasource
         └── db/migration/
