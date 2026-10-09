@@ -17,7 +17,7 @@ public class OpenApiConfig {
             .info(new Info()
                 .title("Blitz 智能商城 API")
                 .version("1.0.0")
-                .description("基于 Java 21 + Spring Boot 的高并发电商平台"))
+                .description("基于 Java 17 + Spring Boot 4.0 的高并发电商平台"))
             .addSecurityItem(new SecurityRequirement().addList("Bearer"))
             .components(new Components()
                 .addSecuritySchemes("Bearer", new SecurityScheme()

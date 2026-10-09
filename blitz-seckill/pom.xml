@@ -10,7 +10,7 @@
     </parent>
     <artifactId>blitz-seckill</artifactId>
     <packaging>jar</packaging>
-    <description>秒杀限界上下文——CQRS、Lua 原子操作、Kafka 削峰（核心技术模块）</description>
+    <description>秒杀限界上下文——Redis Lua 原子预扣、Kafka 削峰、CAS 乐观锁（核心技术模块）</description>
 
     <dependencies>
         <dependency>

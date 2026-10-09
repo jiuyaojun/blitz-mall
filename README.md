@@ -202,7 +202,7 @@ src/main/java/com/blitz/<context>/
 | `blitz_ai` (pgvector) | `vector_store` (pgvector extension) | Auto-managed by Spring AI |
 
 **Architecture highlights:**
-- CQRS for seckill: Redis write path (hot stock) + MySQL read path (persisted orders)
+- Seckill read/write split: hot stock in Redis (Lua atomic pre-deduct), orders persisted in MySQL
 - Repository Port pattern: domain defines interfaces, infrastructure implements
 - Rich domain models: `Order.pay()`, `SeckillProduct.deductStock()`, `SeckillActivity.isInProgress()`
 - Optimistic lock (`@Version`) on seckill product stock for MySQL CAS deduction
