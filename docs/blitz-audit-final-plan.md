@@ -1,6 +1,6 @@
 # Blitz 智能商城 — 全面审查报告 & 修复计划（最终版）
 
-> **审计来源**：管家 Claude Code（终端侧）+ 星云天空 Hermes（服务器侧）
+> 本文记录开发过程中自查发现的问题与修复计划，按严重度分级。
 > **审计范围**：服务器部署代码（119.28.151.191:/home/ubuntu/blitz）+ 本地源码
 > **审计日期**：2026-06-19
 > **版本**：v1.0 Final
@@ -26,18 +26,18 @@
 |---|------|------|------|------|
 | **S1** | Docker 端口全暴露在 0.0.0.0 | docker-compose / 容器实际绑定 | MySQL/Redis/Kafka/PG 公网可访问 | 管家 |
 | **S2** | Redis 无密码认证 | `.env` REDIS_PASSWORD=空 | 公网可读写 Redis，含秒杀库存 | 管家 |
-| **S3** | 订单查询无用户归属校验 → 水平越权 | `OrderController.java:40-48` | 任意用户可遍历查看所有订单（含地址/电话）🔥 | Hermes |
-| **S4** | Swagger API 文档公开暴露 | `SecurityConfig.java:35-39` | `/doc.html` + `/v3/api-docs` 无需认证 | Hermes |
-| **S5** | 秒杀路径 HMAC 密钥硬编码默认值 | `SeckillPathService.java:26` | 源码泄露即可伪造秒杀路径 | Hermes |
+| **S3** | 订单查询无用户归属校验 → 水平越权 | `OrderController.java:40-48` | 任意用户可遍历查看所有订单（含地址/电话）🔥 | 本轮 |
+| **S4** | Swagger API 文档公开暴露 | `SecurityConfig.java:35-39` | `/doc.html` + `/v3/api-docs` 无需认证 | 本轮 |
+| **S5** | 秒杀路径 HMAC 密钥硬编码默认值 | `SeckillPathService.java:26` | 源码泄露即可伪造秒杀路径 | 本轮 |
 | **S6** | 硬编码凭证（4 处） | YML 配置文件 | MySQL/Redis/PG/JWT 密钥明文 | 双方 |
 
 ### 数据一致性（3 个）
 
 | # | 问题 | 位置 | 影响 | 来源 |
 |---|------|------|------|------|
-| **D1** | Kafka 异步发送 → 库存丢失 | `SeckillApplicationService.java:95-101` | `send()` 立即返回，发送失败不回滚 Redis → 用户扣了库存但订单丢失 🔥 | Hermes |
-| **D2** | 秒杀防重与库存扣减非原子 | `SeckillOrderConsumer.java:38-64` | 查重 + 扣库存两步之间有竞态窗口 | Hermes |
-| **D3** | 库存恢复非原子操作 | `StockDeductionService.java:65-76` | 恢复用 read-modify-write 无乐观锁，并发取消互相覆盖 | Hermes |
+| **D1** | Kafka 异步发送 → 库存丢失 | `SeckillApplicationService.java:95-101` | `send()` 立即返回，发送失败不回滚 Redis → 用户扣了库存但订单丢失 🔥 | 本轮 |
+| **D2** | 秒杀防重与库存扣减非原子 | `SeckillOrderConsumer.java:38-64` | 查重 + 扣库存两步之间有竞态窗口 | 本轮 |
+| **D3** | 库存恢复非原子操作 | `StockDeductionService.java:65-76` | 恢复用 read-modify-write 无乐观锁，并发取消互相覆盖 | 本轮 |
 
 ### 功能损坏（4 个）
 
@@ -54,17 +54,17 @@
 
 | # | 问题 | 位置 | 建议 | 来源 |
 |---|------|------|------|------|
-| **W1** | JWT 异常未处理 → HTTP 500 堆栈泄露 | `JwtAuthFilter.java:31` | try-catch 包裹 parseToken | Hermes |
-| **W2** | IP 限流可被 Header 伪造绕过 | `RateLimitFilter.java:156-163` | 信任 X-Forwarded-For 但无受信代理白名单 | Hermes |
-| **W3** | 登录异常捕获过宽 → 误锁合法用户 | `UserController.java:48` | `catch(Exception)` → `catch(BusinessException)` | Hermes |
-| **W4** | getCurrentUserId() 无 null 保护 | 4 个 Controller | Authentication 为 null → HTTP 500 NPE | Hermes |
+| **W1** | JWT 异常未处理 → HTTP 500 堆栈泄露 | `JwtAuthFilter.java:31` | try-catch 包裹 parseToken | 本轮 |
+| **W2** | IP 限流可被 Header 伪造绕过 | `RateLimitFilter.java:156-163` | 信任 X-Forwarded-For 但无受信代理白名单 | 本轮 |
+| **W3** | 登录异常捕获过宽 → 误锁合法用户 | `UserController.java:48` | `catch(Exception)` → `catch(BusinessException)` | 本轮 |
+| **W4** | getCurrentUserId() 无 null 保护 | 4 个 Controller | Authentication 为 null → HTTP 500 NPE | 本轮 |
 | **W5** | Spring Boot 版本混乱 | POM 4.0.0 vs JAR 3.4.5 vs Java 21 | Shutdown 时 NoClassDefFoundError | 管家 |
 | **W6** | Flyway 迁移未执行 | `flyway_schema_history` 不存在 | 20 张表手动创建，版本管理失效 | 管家 |
 | **W7** | 所有表在单一 blitz 库 | 实际 vs 设计（5 schema） | 与 DDD 限界上下文设计矛盾 | 管家 |
 | **W8** | nginx 安全加固未完成 | TLSv1 + server_tokens on | 安全基线不达标 | 管家 |
-| **W9** | CORS `allowedHeaders("*")` + `allowCredentials(true)` | `SecurityConfig.java:69` | 限定具体 header | Hermes |
-| **W10** | XSS 正则过滤不可靠 | `XssFilter.java:67-70` | 应依赖 CSP + 输出编码 | Hermes |
-| **W11** | LoginAttemptService 无过期清理 | ConcurrentHashMap 无限增长 | 内存泄漏 | Hermes |
+| **W9** | CORS `allowedHeaders("*")` + `allowCredentials(true)` | `SecurityConfig.java:69` | 限定具体 header | 本轮 |
+| **W10** | XSS 正则过滤不可靠 | `XssFilter.java:67-70` | 应依赖 CSP + 输出编码 | 本轮 |
+| **W11** | LoginAttemptService 无过期清理 | ConcurrentHashMap 无限增长 | 内存泄漏 | 本轮 |
 | **W12** | run.sh 暴力 kill（无优雅关闭） | `run.sh` | 每次重启 shutdown 异常 | 管家 |
 
 ---
@@ -75,11 +75,11 @@
 |---|------|------|------|
 | G1 | `favicon.ico` 缺失 → 每次请求 ERROR 日志 | 添加文件或排除异常 | 管家 |
 | G2 | DDD 充血模型被绕过 | Consumer 直接调 Repository 而非领域对象方法 | 管家 |
-| G3 | `queryResult()` 只返回 SOLD_OUT/UNKNOWN | 应查询订单实际状态 | Hermes |
-| G4 | `OrderEvent` JSON 拼字符串 | 改用 ObjectMapper/Jackson | Hermes |
-| G5 | MySQL LIKE 全文搜索效率低 | 迁移到 Elasticsearch | Hermes |
-| G6 | Sentinel 限流规则硬编码 | 改为配置项 | Hermes |
-| G7 | `rollbackStock` 用 INCR 未检查售罄标记 | 售罄后回滚可能错误重置状态 | Hermes |
+| G3 | `queryResult()` 只返回 SOLD_OUT/UNKNOWN | 应查询订单实际状态 | 本轮 |
+| G4 | `OrderEvent` JSON 拼字符串 | 改用 ObjectMapper/Jackson | 本轮 |
+| G5 | MySQL LIKE 全文搜索效率低 | 迁移到 Elasticsearch | 本轮 |
+| G6 | Sentinel 限流规则硬编码 | 改为配置项 | 本轮 |
+| G7 | `rollbackStock` 用 INCR 未检查售罄标记 | 售罄后回滚可能错误重置状态 | 本轮 |
 | G8 | 无 favicon 错误被记录为 ERROR 级别 | 降级为 WARN 或排除 | 管家 |
 
 ---

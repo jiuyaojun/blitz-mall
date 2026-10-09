@@ -773,5 +773,4 @@ MIT License -- see [LICENSE](LICENSE) file for details.
 ---
 
 **Author:** xuchenxiang  
-**Project:** Graduation Project 2026  
-**Tech Lead:** Claude Code + Hermes (dual AI agent collaboration)
+**Project:** Blitz Smart Mall
