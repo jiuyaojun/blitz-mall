@@ -1,7 +1,5 @@
 -- V11: Seed test user accounts for demo & defense
--- BCrypt 10 rounds, passwords:
---   testuser/123456  testmerchant/123456  admin/admin123
---   test/User123456  demo/Demo123456  shop1/Shop123456
+-- BCrypt 10 rounds。演示账号见 static/login.html 的登录提示。
 INSERT INTO user (username, password, phone, email, role_id, status) VALUES
 ('testuser', '$2b$10$v0fdxSLgATnhTomBgVcaue8D0P0YNbBLK0KfwGy5oVyFghjtMwpva', '13800000001', 'testuser@blitz.local', 2, 1),
 ('testmerchant', '$2b$10$v0fdxSLgATnhTomBgVcaue8D0P0YNbBLK0KfwGy5oVyFghjtMwpva', '13800000002', 'testmerchant@blitz.local', 3, 1),
