@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
@@ -95,6 +96,13 @@ class ChatApplicationServiceTest {
         @Test
         @DisplayName("returns messages from repository")
         void returnsMessagesFromRepository() {
+            // getMessages 现在带会话所有权校验，必须先让 findById 返回会话，
+            // 否则会在 orElseThrow 处抛 "Session not found"。
+            ChatSession session = new ChatSession();
+            session.setId(1L);
+            session.setUserId(1L);
+            when(sessionRepository.findById(1L)).thenReturn(Optional.of(session));
+
             ChatMessage msg1 = ChatMessage.of(1L, ChatMessage.ROLE_USER, "hello");
             ChatMessage msg2 = ChatMessage.of(1L, ChatMessage.ROLE_AI, "hi there");
             when(messageRepository.findBySessionId(1L)).thenReturn(List.of(msg1, msg2));
@@ -105,6 +113,22 @@ class ChatApplicationServiceTest {
             assertThat(result.get(0).getContent()).isEqualTo("hello");
             assertThat(result.get(1).getRole()).isEqualTo(ChatMessage.ROLE_AI);
             verify(messageRepository).findBySessionId(1L);
+        }
+
+        @Test
+        @DisplayName("拒绝读取他人的会话消息")
+        void rejectsOtherUsersSession() {
+            ChatSession session = new ChatSession();
+            session.setId(1L);
+            session.setUserId(999L);   // 会话属于别人
+            when(sessionRepository.findById(1L)).thenReturn(Optional.of(session));
+
+            assertThatThrownBy(() -> chatApplicationService.getMessages(1L, 1L))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("Access denied");
+
+            // 校验不通过时不应读消息
+            verify(messageRepository, never()).findBySessionId(anyLong());
         }
     }
 

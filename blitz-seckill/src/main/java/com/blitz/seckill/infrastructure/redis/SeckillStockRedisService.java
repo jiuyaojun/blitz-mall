@@ -41,6 +41,37 @@ public class SeckillStockRedisService {
         return luaSha;
     }
 
+    /**
+     * 确保 Lua 脚本已加载（幂等，线程安全）。
+     *
+     * 修复记录：此前 loadScript() 在生产代码里没有任何调用点 ——
+     * SeckillCacheService.warmUpActivity() 只调 initStock()，不调它，
+     * 导致 executeDeduct() 里的 luaSha 永远为 null，每次秒杀必然抛
+     * IllegalStateException("Lua script not loaded")。只有单元测试通过反射
+     * 手动注入过 luaSha，所以问题没被测试发现。
+     *
+     * 现在两处生效：启动时 @PostConstruct 先加载一次；若那时 Redis 还没就绪，
+     * executeDeduct() 会在这里重试 —— 而不是直接把失败抛给用户。
+     */
+    @jakarta.annotation.PostConstruct
+    public void ensureScriptLoaded() {
+        if (luaSha != null) {
+            return;
+        }
+        synchronized (this) {
+            if (luaSha != null) {
+                return;
+            }
+            try {
+                loadScript();
+            } catch (Exception e) {
+                // 启动阶段 Redis 可能尚未就绪。不因此让应用起不来 ——
+                // 真正调用秒杀时会再试一次。
+                log.warn("启动时加载秒杀 Lua 脚本失败，将在首次执行时重试: {}", e.toString());
+            }
+        }
+    }
+
     /** 预热库存到 Redis */
     public void initStock(Long seckillProductId, int stock) {
         String stockKey = String.format(STOCK_KEY, seckillProductId);
@@ -71,7 +102,11 @@ public class SeckillStockRedisService {
      */
     public long executeDeduct(Long seckillProductId, Long userId) {
         if (luaSha == null) {
-            throw new IllegalStateException("Lua script not loaded — call loadScript() first");
+            // 启动时没加载成功（Redis 未就绪、或本类是懒加载的），这里再试一次
+            ensureScriptLoaded();
+        }
+        if (luaSha == null) {
+            throw new IllegalStateException("Lua 脚本未能加载到 Redis，秒杀暂不可用");
         }
 
         List<Object> keys = Arrays.asList(

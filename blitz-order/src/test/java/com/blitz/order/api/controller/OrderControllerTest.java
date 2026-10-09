@@ -154,7 +154,7 @@ class OrderControllerTest {
     void pageOrdersReturnsOk() throws Exception {
         var pageResult = new PageResult<>(
             List.of(sampleOrderVO), 1L, 1, 10);
-        when(orderQueryService.pageByUser(anyLong(), eq(1), eq(10)))
+        when(orderQueryService.pageByUser(anyLong(), eq(1), eq(10), any()))
             .thenReturn(pageResult);
 
         mockMvc.perform(get("/order/page")

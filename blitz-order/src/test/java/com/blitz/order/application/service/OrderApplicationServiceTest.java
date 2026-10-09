@@ -51,6 +51,16 @@ class OrderApplicationServiceTest {
 
     @BeforeEach
     void setUp() {
+        // orderEventPublisher 在 OrderApplicationService 里是 @Autowired(required = false)
+        // 的非 final 字段（minimal 兼容补丁把它从 final 改掉了），因此不在 Lombok
+        // @RequiredArgsConstructor 生成的构造器参数里。
+        // Mockito 的 @InjectMocks 只采用一种注入策略：存在可满足的构造器时只用构造器，
+        // 不会再做字段注入 —— 于是该字段恒为 null，
+        // 服务里 `if (orderEventPublisher != null)` 短路，publishXxx 永远不会被调用。
+        // 生产环境由 Spring 正常注入，这里显式补上。
+        org.springframework.test.util.ReflectionTestUtils.setField(
+            service, "orderEventPublisher", orderEventPublisher);
+
         sampleOrder = new Order();
         sampleOrder.setId(1L);
         sampleOrder.setOrderNo("SN2024061800001");
