@@ -106,9 +106,18 @@ public class OrderController {
         return Result.success();
     }
 
-    /** 发货（管理员/商家） */
+    /**
+     * 发货。
+     *
+     * 只允许 ADMIN：本模块依赖 blitz-product 但不依赖 blitz-user，拿不到 ShopRepository，
+     * 无法在这里判断「这笔订单是否属于该商家的店铺」。
+     * 原先这里放行 MERCHANT，而 shipOrder(id) 内部没有任何归属校验 ——
+     * 意味着任意商家可以给任意订单发货。
+     *
+     * 商家发货请走 POST /merchant/orders/{id}/ship，那个端点带店铺归属校验。
+     */
     @PostMapping("/{id}/ship")
-    @RequireRole({"ADMIN", "MERCHANT"})
+    @RequireRole("ADMIN")
     public Result<Void> ship(@PathVariable Long id) {
         orderApplicationService.shipOrder(id);
         return Result.success();

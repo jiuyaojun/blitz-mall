@@ -135,14 +135,41 @@ public class MerchantController {
         return Result.success(merchantApplicationService.listOrders(userId));
     }
 
-    /** Merchant refunds an order */
+    /**
+     * 商家退款。
+     * 修复：原先直接 orderMapper.selectById(id) 就退款，任何商家都能退任意订单。
+     * 现在先做店铺归属校验。
+     */
     @PostMapping("/orders/{id}/refund")
     @RequireRole("MERCHANT")
     public Result<Void> refundOrder(@PathVariable Long id) {
+        Long userId = getCurrentUserId();
+        merchantApplicationService.requireOwnOrder(userId, id);
         Order order = orderMapper.selectById(id);
         if (order == null) return Result.fail(404, "订单不存在");
         try {
             order.refund();
+            orderMapper.updateById(order);
+            return Result.success();
+        } catch (IllegalStateException e) {
+            return Result.fail(400, e.getMessage());
+        }
+    }
+
+    /**
+     * 商家发货。
+     * 与 /order/{id}/ship 的区别：那个端点只放行 ADMIN，因为 blitz-order 模块拿不到
+     * ShopRepository 做归属判断；商家发货走这里，带店铺归属校验。
+     */
+    @PostMapping("/orders/{id}/ship")
+    @RequireRole("MERCHANT")
+    public Result<Void> shipOrder(@PathVariable Long id) {
+        Long userId = getCurrentUserId();
+        merchantApplicationService.requireOwnOrder(userId, id);
+        Order order = orderMapper.selectById(id);
+        if (order == null) return Result.fail(404, "订单不存在");
+        try {
+            order.ship();
             orderMapper.updateById(order);
             return Result.success();
         } catch (IllegalStateException e) {

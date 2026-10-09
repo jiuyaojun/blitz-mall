@@ -1,0 +1,29 @@
+# 换行符策略
+#
+# 本仓库在 Windows 上开发（.bat 脚本、IDE 在 Windows），部署目标是 Linux
+# （/home/ubuntu/blitz，systemd 直接跑 jar，脚本用 bash）。
+# 不加这个文件的话，Windows 上 checkout 出来的 .sh 会带上 CRLF，
+# 传到 Linux 执行时报 "bad interpreter: /bin/bash^M"。
+
+# Shell 脚本必须 LF
+*.sh   text eol=lf
+
+# Windows 批处理必须 CRLF
+*.bat  text eol=crlf
+*.cmd  text eol=crlf
+
+# 二进制文件不做任何转换
+*.jar   binary
+*.class binary
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.ico   binary
+*.pdf   binary
+*.pptx  binary
+*.docx  binary
+*.zip   binary
+*.mp4   binary
+*.woff  binary
+*.woff2 binary

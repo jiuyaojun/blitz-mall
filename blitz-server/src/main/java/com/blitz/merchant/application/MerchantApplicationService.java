@@ -227,5 +227,35 @@ public class MerchantApplicationService {
         return orders;
     }
 
+    /**
+     * 校验某订单是否属于该商家的店铺；不属于则抛 FORBIDDEN。
+     *
+     * 背景：Order 实体上没有 shopId 字段，订单与店铺的关系是
+     * order_item -> sku -> product -> shop。这里复用 listOrders 的同一套过滤口径，
+     * 避免两处判断不一致。
+     *
+     * 之前 refundOrder 直接 orderMapper.selectById(id) 就退款，任何商家都能退任意订单；
+     * 本方法就是为堵这个洞加的。
+     */
+    public void requireOwnOrder(Long userId, Long orderId) {
+        Shop shop = getShop(userId);
+        List<Product> products = productRepository.findByShopId(shop.getId());
+        if (products.isEmpty()) {
+            throw new BusinessException(ErrorCode.FORBIDDEN);
+        }
+        List<Long> productIds = products.stream().map(Product::getId).toList();
+        Long count = orderMapper.selectCount(
+            new LambdaQueryWrapper<Order>()
+                .eq(Order::getId, orderId)
+                .inSql(Order::getId,
+                    "SELECT DISTINCT oi.order_id FROM order_item oi WHERE oi.sku_id IN " +
+                    "(SELECT s.id FROM sku s WHERE s.product_id IN " +
+                    "(" + productIds.stream().map(String::valueOf).reduce((a,b) -> a+","+b).orElse("0") + "))")
+        );
+        if (count == null || count == 0) {
+            throw new BusinessException(ErrorCode.FORBIDDEN);
+        }
+    }
+
     public record SkuInput(String name, Map<String, String> spec, BigDecimal price, Integer stock) {}
 }
