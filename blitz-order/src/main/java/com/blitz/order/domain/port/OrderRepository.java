@@ -11,7 +11,7 @@ public interface OrderRepository {
     Optional<Order> findByOrderNo(String orderNo);
     List<Order> findByUserId(Long userId);
     List<Order> findByUserIdAndStatus(Long userId, Integer status);
-    Page<Order> findByUserIdPage(Long userId, Page<Order> page);
+    Page<Order> findByUserIdPage(Long userId, Page<Order> page, String status);
     Order save(Order order);
     int updateStatusWithVersion(Long id, Integer newStatus, Integer oldVersion);
 }

@@ -52,6 +52,8 @@ blitz:
   jwt:
     secret: ${BLITZ_JWT_SECRET}
     expiration: 86400000
+  seckill:
+    path-secret: ${BLITZ_SECKILL_PATH_SECRET:blitz-seckill-dev-secret}
 
 springdoc:
   swagger-ui:

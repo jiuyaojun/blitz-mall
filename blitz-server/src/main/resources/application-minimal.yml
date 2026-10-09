@@ -1,0 +1,81 @@
+# ============================================================================
+# minimal profile —— 本地开发 / 演示用
+#
+# 用途：在一台只装了 MySQL 的普通机器上把应用跑起来（不需要 Sentinel、Seata、
+#       Redisson、Kafka、PgVector 等中间件，见下面的 autoconfigure.exclude）。
+#
+# 默认值均指向本机开发环境（localhost:3306，用户 root）。生产部署请用环境变量
+# 覆盖：MYSQL_URL / MYSQL_USER / MYSQL_PASSWORD / BLITZ_JWT_SECRET /
+#       BLITZ_SECKILL_PATH_SECRET / OPENAI_API_KEY
+#
+# 本文件此前被 .gitignore 忽略，导致 clone 之后没有数据源配置、应用起不来，
+# 2026-10-09 改为纳入版本管理。
+# ============================================================================
+server:
+  servlet:
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
+spring:
+  autoconfigure:
+    exclude:
+      - com.alibaba.cloud.sentinel.endpoint.SentinelEndpointAutoConfiguration
+      - com.alibaba.cloud.sentinel.SentinelWebAutoConfiguration
+      - io.seata.spring.boot.autoconfigure.SeataAutoConfiguration
+      - io.seata.spring.boot.autoconfigure.SeataDataSourceAutoConfiguration
+      - org.redisson.spring.starter.RedissonAutoConfigurationV2
+      - org.springframework.cloud.client.discovery.simple.SimpleDiscoveryClientAutoConfiguration
+      - org.springframework.cloud.client.discovery.composite.CompositeDiscoveryClientAutoConfiguration
+      - org.springframework.cloud.client.discovery.simple.reactive.SimpleReactiveDiscoveryClientAutoConfiguration
+      - org.springframework.cloud.client.loadbalancer.LoadBalancerAutoConfiguration
+      - com.baomidou.mybatisplus.autoconfigure.MybatisPlusAutoConfiguration
+      - org.springframework.ai.autoconfigure.openai.OpenAiAutoConfiguration
+      - org.springframework.ai.autoconfigure.openai.OpenAiConnectionAutoConfiguration
+      - org.springframework.ai.autoconfigure.vectorstore.pgvector.PgVectorAutoConfiguration
+  datasource:
+    url: ${MYSQL_URL:jdbc:mysql://localhost:3306/blitz?characterEncoding=UTF-8&serverTimezone=Asia/Shanghai}
+    username: ${MYSQL_USER:root}
+    password: ${MYSQL_PASSWORD:root}      # 本地开发默认值，生产用环境变量覆盖
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  ai:
+    openai:
+      api-key: sk-demo
+  cloud:
+    compatibility-verifier:
+      enabled: false
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  global-config:
+    db-config:
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+blitz:
+  jwt:
+    secret: ${BLITZ_JWT_SECRET:blitz-jwt-secret-key-for-demo-2026-minimal-mode-32bytes}
+    expiration: 86400000
+  seckill:
+    path-secret: ${BLITZ_SECKILL_PATH_SECRET:blitz-seckill-demo-secret}
+springdoc:
+  swagger-ui:
+    path: /doc.html
+  api-docs:
+    path: /v3/api-docs
+logging:
+  level:
+    com.blitz: debug
+    org.springframework.security: warn
+seata:
+  enabled: false
+  registry:
+    type: file
+  service:
+    vgroupMapping:
+      default_tx_group: default

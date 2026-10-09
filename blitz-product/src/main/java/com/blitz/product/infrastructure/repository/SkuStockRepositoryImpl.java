@@ -48,6 +48,17 @@ public class SkuStockRepositoryImpl implements SkuStockRepository {
     }
 
     @Override
+    public int updateStockWithVersion(Long skuId, int newStock, int oldVersion) {
+        return skuStockMapper.update(null,
+            new LambdaUpdateWrapper<SkuStock>()
+                .eq(SkuStock::getSkuId, skuId)
+                .eq(SkuStock::getVersion, oldVersion)
+                .set(SkuStock::getStock, newStock)
+                .setSql("version = version + 1")
+        );
+    }
+
+    @Override
     public void deleteBySkuId(Long skuId) {
         skuStockMapper.delete(
             new LambdaQueryWrapper<SkuStock>().eq(SkuStock::getSkuId, skuId)

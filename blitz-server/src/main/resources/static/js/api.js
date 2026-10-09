@@ -19,7 +19,12 @@ const api = {
     }
 
     const res = await fetch(API_BASE + path, opts);
-    const data = await res.json().catch(() => ({}));
+    const data = await res.json().catch(() => null);
+
+    // If response is not JSON at all (e.g., 404 HTML page), treat as error
+    if (data === null) {
+      throw new Error('服务器响应异常 (HTTP ' + res.status + ')');
+    }
 
     if (data.code !== 0 && data.code !== undefined) {
       if (data.code === 401 || data.code === 403) {
@@ -72,13 +77,13 @@ const api = {
     const qs = new URLSearchParams();
     Object.entries(params).forEach(([k, v]) => { if (v != null && v !== '') qs.set(k, v); });
     const s = qs.toString();
-    return this.get('/order/list' + (s ? '?' + s : ''));
+    return this.get('/order/page' + (s ? '?' + s : ''));
   },
   getOrder(id) {
     return this.get('/order/' + id);
   },
   payOrder(orderId) {
-    return this.post('/order/pay', { orderId });
+    return this.post('/order/' + orderId + '/pay');
   },
   cancelOrder(orderId) {
     return this.post('/order/' + orderId + '/cancel');
@@ -141,6 +146,12 @@ const api = {
   },
   replyReview(reviewId, reply) {
     return this.post('/review/' + reviewId + '/reply', { reply: reply });
+  },
+  getMyReviews(params = {}) {
+    const qs = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => { if (v != null && v !== '') qs.set(k, v); });
+    const s = qs.toString();
+    return this.get('/review/my' + (s ? '?' + s : ''));
   },
   getReviewStats(productId) {
     return this.get('/review/stats/' + productId);
@@ -205,6 +216,9 @@ const api = {
   banUser(userId) {
     return this.post('/admin/users/' + userId + '/ban');
   },
+  unbanUser(userId) {
+    return this.post('/admin/users/' + userId + '/unban');
+  },
   getAdminOrders(params = {}) {
     const qs = new URLSearchParams();
     Object.entries(params).forEach(([k, v]) => { if (v != null && v !== '') qs.set(k, v); });
@@ -212,6 +226,12 @@ const api = {
   },
   refundOrder(orderId) {
     return this.post('/admin/orders/' + orderId + '/refund');
+  },
+  deleteAdminProduct(productId) {
+    return this.del('/admin/products/' + productId);
+  },
+  toggleAdminProduct(productId) {
+    return this.put('/admin/products/' + productId + '/toggle');
   },
   getAdminSeckillActivities() {
     return this.get('/seckill/admin/activities');

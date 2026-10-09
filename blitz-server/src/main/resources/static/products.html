@@ -382,10 +382,10 @@
     var html = '';
     for (var i = 0; i < state.products.length; i++) {
       var p = state.products[i];
-      var price = formatPrice(p.price != null ? p.price : p.minPrice);
+      var price = formatPrice((p.minPrice || p.price || null) != null ? (p.minPrice || p.price || null) : p.minPrice);
 
       var origPriceHTML = '';
-      if (p.originalPrice != null && Number(p.originalPrice) !== Number(p.price)) {
+      if (p.originalPrice != null && Number(p.originalPrice) !== Number((p.minPrice || p.price || null))) {
         origPriceHTML = '<span class="original">' + formatPrice(p.originalPrice) + '</span>';
       }
 
@@ -399,8 +399,8 @@
       }
 
       var imgHTML;
-      if (p.image) {
-        imgHTML = '<img src="' + p.image + '" alt="' + p.name + '" loading="lazy">';
+      if ((p.mainImage || p.image || '')) {
+        imgHTML = '<img src="' + (p.mainImage || p.image || '') + '" alt="' + p.name + '" loading="lazy">';
       } else {
         imgHTML = '<span class="img-placeholder">📦</span>';
       }
@@ -582,9 +582,9 @@
     /* Build vertical comparison table:
        Row per attribute, first column = label, rest = values */
     var rows = [
-      { label: '图片',   render: function(p) { return p.image ? '<img class="compare-img" src="' + p.image + '" alt="' + p.name + '">' : '<span style="font-size:2rem">📦</span>'; } },
+      { label: '图片',   render: function(p) { return (p.mainImage || p.image || '') ? '<img class="compare-img" src="' + (p.mainImage || p.image || '') + '" alt="' + p.name + '">' : '<span style="font-size:2rem">📦</span>'; } },
       { label: '名称',   render: function(p) { return p.name || '-'; } },
-      { label: '价格',   render: function(p) { return '<strong style="color:var(--danger)">' + formatPrice(p.price != null ? p.price : p.minPrice) + '</strong>'; } },
+      { label: '价格',   render: function(p) { return '<strong style="color:var(--danger)">' + formatPrice((p.minPrice || p.price || null) != null ? (p.minPrice || p.price || null) : p.minPrice) + '</strong>'; } },
       { label: '品牌',   render: function(p) { return p.brand || p.brandName || '-'; } },
       { label: '销量',   render: function(p) { return (p.sales != null && p.sales > 0) ? formatNumber(p.sales) : '-'; } },
       { label: '评分',   render: function(p) { return (p.rating != null && p.rating > 0) ? renderStars(p.rating) + ' ' + (p.rating).toFixed(1) : '-'; } },

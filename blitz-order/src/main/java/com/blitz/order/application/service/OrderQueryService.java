@@ -38,9 +38,9 @@ public class OrderQueryService {
             .map(this::toVO).toList();
     }
 
-    public PageResult<OrderVO> pageByUser(Long userId, int page, int size) {
+    public PageResult<OrderVO> pageByUser(Long userId, int page, int size, String status) {
         Page<Order> orderPage = orderRepository.findByUserIdPage(
-            userId, new Page<>(page, size));
+            userId, new Page<>(page, size), status);
         List<OrderVO> records = orderPage.getRecords().stream()
             .map(this::toVO).toList();
         return new PageResult<>(records, orderPage.getTotal(), page, size);

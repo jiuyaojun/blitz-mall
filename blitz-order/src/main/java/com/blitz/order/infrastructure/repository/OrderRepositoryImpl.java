@@ -54,12 +54,22 @@ public class OrderRepositoryImpl implements OrderRepository {
     }
 
     @Override
-    public Page<Order> findByUserIdPage(Long userId, Page<Order> page) {
-        return orderMapper.selectPage(page,
-            new LambdaQueryWrapper<Order>()
-                .eq(Order::getUserId, userId)
-                .orderByDesc(Order::getCreateTime)
-        );
+    public Page<Order> findByUserIdPage(Long userId, Page<Order> page, String status) {
+        LambdaQueryWrapper<Order> qw = new LambdaQueryWrapper<Order>()
+            .eq(Order::getUserId, userId);
+        // Map frontend string status codes to numeric codes
+        if (status != null && !status.isEmpty()) {
+            Integer code = null;
+            String s = status.toUpperCase();
+            if (s.equals("PENDING_PAYMENT") || s.equals("PENDING")) code = 0;
+            else if (s.equals("PAID")) code = 1;
+            else if (s.equals("SHIPPED")) code = 2;
+            else if (s.equals("RECEIVED")) code = 3;
+            else if (s.equals("CANCELLED")) code = 4;
+            else if (s.equals("REFUNDED")) code = 5;
+            if (code != null) qw.eq(Order::getStatus, code);
+        }
+        return orderMapper.selectPage(page, qw.orderByDesc(Order::getCreateTime));
     }
 
     @Override

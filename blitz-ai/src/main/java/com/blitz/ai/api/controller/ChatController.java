@@ -72,10 +72,11 @@ public class ChatController {
         return Map.of("sessionId", session.getId());
     }
 
-    /** 获取会话消息 */
+    /** 获取会话消息（验证所有权） */
     @GetMapping("/session/{sessionId}/messages")
     public Object getMessages(@PathVariable Long sessionId) {
-        return chatApplicationService.getMessages(sessionId);
+        Long userId = getCurrentUserId();
+        return chatApplicationService.getMessages(sessionId, userId);
     }
 
     private Long getCurrentUserId() {

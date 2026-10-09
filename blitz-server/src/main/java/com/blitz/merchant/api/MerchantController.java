@@ -130,11 +130,24 @@ public class MerchantController {
     @GetMapping("/orders")
     @RequireRole("MERCHANT")
     public Result<List<Order>> listOrders() {
-        var allOrders = orderMapper.selectList(
-            new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<Order>()
-                .orderByDesc(Order::getCreateTime)
-        );
-        return Result.success(allOrders.stream().limit(50).toList());
+        Long userId = getCurrentUserId();
+        // Delegate to service for shop-level isolation
+        return Result.success(merchantApplicationService.listOrders(userId));
+    }
+
+    /** Merchant refunds an order */
+    @PostMapping("/orders/{id}/refund")
+    @RequireRole("MERCHANT")
+    public Result<Void> refundOrder(@PathVariable Long id) {
+        Order order = orderMapper.selectById(id);
+        if (order == null) return Result.fail(404, "订单不存在");
+        try {
+            order.refund();
+            orderMapper.updateById(order);
+            return Result.success();
+        } catch (IllegalStateException e) {
+            return Result.fail(400, e.getMessage());
+        }
     }
 
     private Long getCurrentUserId() {

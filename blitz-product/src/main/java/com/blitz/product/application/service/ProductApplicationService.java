@@ -21,6 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.math.BigDecimal;
 import java.util.List;
 
 @Service
@@ -72,7 +73,7 @@ public class ProductApplicationService {
 
     @Transactional
     public void delete(Long id) {
-        Product product = productRepository.findById(id)
+        productRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND.getCode(), "商品不存在"));
         // Soft delete SKUs and their stocks first
         List<Sku> skus = skuRepository.findByProductId(id);
@@ -80,9 +81,8 @@ public class ProductApplicationService {
             skuStockRepository.deleteBySkuId(sku.getId());
         }
         skuRepository.deleteByProductId(id);
-        // MyBatis-Plus @TableLogic handles soft delete for product
-        productRepository.save(product);
-        // Trigger delete via mapper for @TableLogic
+        // Soft delete product via MyBatis-Plus @TableLogic (must use deleteById, not save)
+        productRepository.deleteById(id);
     }
 
     public ProductVO getById(Long id) {
@@ -91,14 +91,14 @@ public class ProductApplicationService {
         return toVO(product);
     }
 
-    public PageResult<ProductVO> listByCategory(Long categoryId, int page, int size) {
+    public PageResult<ProductVO> listByCategory(Long categoryId, int page, int size, String sort) {
         List<Product> products;
         long total;
         if (categoryId == null) {
-            products = productRepository.findAll(page, size);
+            products = productRepository.findAll(page, size, sort);
             total = productRepository.countAll();
         } else {
-            products = productRepository.findByCategoryId(categoryId, page, size);
+            products = productRepository.findByCategoryId(categoryId, page, size, sort);
             total = productRepository.countByCategoryId(categoryId);
         }
         List<ProductVO> vos = products.stream().map(this::toVO).toList();
@@ -144,8 +144,16 @@ public class ProductApplicationService {
     private ProductVO toVO(Product product) {
         List<Sku> skus = skuRepository.findByProductId(product.getId());
         List<SkuDTO> skuDTOs = new ArrayList<>();
+        BigDecimal minPrice = null;
         for (Sku sku : skus) {
-            skuDTOs.add(toSkuDTO(sku));
+            Integer stock = skuStockRepository.findBySkuId(sku.getId())
+                    .map(SkuStock::getStock)
+                    .orElse(0);
+            SkuDTO dto = new SkuDTO(sku.getId(), sku.getName(), sku.getSpecMap(), sku.getPrice(), stock);
+            skuDTOs.add(dto);
+            if (sku.getPrice() != null && (minPrice == null || sku.getPrice().compareTo(minPrice) < 0)) {
+                minPrice = sku.getPrice();
+            }
         }
         return new ProductVO(
             product.getId(),
@@ -153,6 +161,10 @@ public class ProductApplicationService {
             product.getCategoryId(),
             product.getBrand(),
             product.getStatus(),
+            product.getMainImage(),
+            product.getDescription(),
+            minPrice,
+            product.getSaleCount(),
             skuDTOs,
             product.getCreateTime()
         );
@@ -162,7 +174,7 @@ public class ProductApplicationService {
         Integer stock = skuStockRepository.findBySkuId(sku.getId())
                 .map(SkuStock::getStock)
                 .orElse(0);
-        return new SkuDTO(sku.getName(), sku.getSpecMap(), sku.getPrice(), stock);
+        return new SkuDTO(sku.getId(), sku.getName(), sku.getSpecMap(), sku.getPrice(), stock);
     }
 
     private void buildSkus(Long productId, List<SkuDTO> skuDTOs) {

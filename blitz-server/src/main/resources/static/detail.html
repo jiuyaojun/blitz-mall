@@ -414,7 +414,7 @@
   }
 
   function renderImages() {
-    var images = product.images || (product.image ? [product.image] : []);
+    var images = product.images || ((product.mainImage || product.image || '') ? [(product.mainImage || product.image || '')] : []);
     var mainImg = $('main-img');
     var placeholder = $('main-img-placeholder');
     var thumbsRow = $('thumbs-row');
@@ -456,7 +456,7 @@
     if (!skus || skus.length === 0) {
       skuGroup.style.display = 'none';
       selectedSku = null;
-      updatePriceDisplay({ price: product.price, originalPrice: product.originalPrice });
+      updatePriceDisplay({ price: (product.minPrice || product.price || 0), originalPrice: (product.originalPrice || null) });
       updateStockDisplay();
       return;
     }
@@ -534,10 +534,10 @@
     if (isSeckill && product && product.seckillPrice != null) {
       $('price-current').textContent = formatPrice(product.seckillPrice);
       $('sticky-bar-price').textContent = formatPrice(product.seckillPrice);
-      if (product.originalPrice && product.originalPrice > product.seckillPrice) {
-        $('price-original').textContent = formatPrice(product.originalPrice);
+      if ((product.originalPrice || null) && (product.originalPrice || null) > product.seckillPrice) {
+        $('price-original').textContent = formatPrice((product.originalPrice || null));
         $('price-original').style.display = '';
-        var pct = Math.round((1 - product.seckillPrice / product.originalPrice) * 100);
+        var pct = Math.round((1 - product.seckillPrice / (product.originalPrice || null)) * 100);
         $('discount-tag').textContent = pct + '% OFF';
         $('discount-tag').style.display = '';
       } else {
@@ -548,8 +548,8 @@
     }
 
     var s = sku || {};
-    var current = s.price != null ? s.price : (product ? product.price : 0);
-    var original = s.originalPrice != null ? s.originalPrice : (product ? product.originalPrice : 0);
+    var current = s.price != null ? s.price : (product ? (product.minPrice || product.price || 0) : 0);
+    var original = s.originalPrice != null ? s.originalPrice : (product ? (product.originalPrice || null) : 0);
 
     $('price-current').textContent = formatPrice(current);
     $('sticky-bar-price').textContent = formatPrice(current);
@@ -642,7 +642,7 @@
     updateActionButtons();
   }
 
-  // ===== BUY =====
+  // ===== BUY NOW → add to cart then go checkout =====
   function handleBuy() {
     if (!product) return;
     var skus = product.skus;
@@ -661,38 +661,20 @@
     }
 
     var buyBtn = $('btn-buy');
-    var stickyBuyBtn = $('sticky-btn-buy');
     buyBtn.disabled = true;
-    if (stickyBuyBtn) stickyBuyBtn.disabled = true;
     buyBtn.textContent = '下单中...';
-    if (stickyBuyBtn) stickyBuyBtn.textContent = '下单中...';
 
-    var fnName = (isSeckill && product.seckill) ? 'seckillOrder' : 'createOrder';
-    var orderApi = api[fnName] || api.createOrder;
-    var params = {
-      productId: product.id || productId,
-      skuId: selectedSku ? (selectedSku.id || selectedSku.skuId) : null,
-      quantity: quantity
-    };
-    if (isSeckill && product.seckillId) params.seckillId = product.seckillId;
+    // Add to cart as checked, then redirect to checkout
+    CART.add(product, selectedSku ? (selectedSku.id || selectedSku.skuId) : null, quantity);
+    // Ensure only this item is checked
+    var items = CART.getItems();
+    items.forEach(function(it) { it.checked = (it.key === (product.id + '_' + (selectedSku ? (selectedSku.id || selectedSku.skuId) : 'default'))); });
+    CART.saveItems(items);
 
-    orderApi(params).then(function(order) {
-      showToast('下单成功！', 'success');
-      var oid = (order && (order.id || order.orderId)) || '';
-      setTimeout(function() {
-        if (oid) {
-          location.href = '/payment.html?orderId=' + oid;
-        } else {
-          location.href = '/user.html';
-        }
-      }, 800);
-    }).catch(function(e) {
-      showToast('下单失败：' + (e.message || '请重试'), 'error');
-      buyBtn.disabled = false;
-      if (stickyBuyBtn) stickyBuyBtn.disabled = false;
-      buyBtn.textContent = isSeckill ? '立即秒杀' : '立即购买';
-      if (stickyBuyBtn) stickyBuyBtn.textContent = isSeckill ? '立即秒杀' : '立即购买';
-    });
+    showToast('正在跳转结算页...', 'info');
+    setTimeout(function() {
+      location.href = '/checkout.html';
+    }, 300);
   }
 
   function handleAddCart(e) {
@@ -722,8 +704,8 @@
             productId: product.id || productId,
             skuId: itemId,
             name: product.name,
-            image: (product.images && product.images[0]) || product.image || '',
-            price: selectedSku ? selectedSku.price : product.price,
+            image: (product.images && product.images[0]) || (product.mainImage || product.image || '') || '',
+            price: selectedSku ? selectedSku.price : (product.minPrice || product.price || 0),
             quantity: quantity
           });
         }
@@ -731,7 +713,7 @@
       }
       showToast('已加入购物车', 'success');
       // Fly-to-cart animation
-      var img = (product.images && product.images[0]) || product.image || product.mainImage || '';
+      var img = (product.images && product.images[0]) || (product.mainImage || product.image || '') || product.mainImage || '';
       if (img && typeof flyToCart === 'function') {
         flyToCart(img, e.currentTarget);
       }
@@ -861,10 +843,14 @@
     }
 
     var imagesHtml = '';
-    if (r.images && r.images.length > 0) {
+    var imgs = [];
+    try {
+      if (r.images) { imgs = typeof r.images === 'string' ? JSON.parse(r.images) : r.images; }
+    } catch(e) { imgs = []; }
+    if (Array.isArray(imgs) && imgs.length > 0) {
       imagesHtml = '<div class="review-images">' +
-        r.images.map(function(src) {
-          return '<img src="' + escapeHtml(src) + '" alt="评价图片" onclick="window.open(\'' + escapeHtml(src) + '\')" onerror="this.style.display=\'none\'" loading="lazy">';
+        imgs.filter(function(u) { return u && u.length > 0; }).map(function(src) {
+          return '<img src="' + escapeHtml(src) + '" alt="评价图片" onerror="this.style.display=\'none\'" loading="lazy">';
         }).join('') +
         '</div>';
     }

@@ -8,5 +8,6 @@ public interface SkuStockRepository {
     Optional<SkuStock> findBySkuId(Long skuId);
     SkuStock save(SkuStock skuStock);
     int deductStock(Long skuId, int qty, int oldVersion);
+    int updateStockWithVersion(Long skuId, int newStock, int oldVersion);
     void deleteBySkuId(Long skuId);
 }

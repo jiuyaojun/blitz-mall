@@ -5,7 +5,11 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.blitz.common.result.Result;
 import com.blitz.order.domain.model.Order;
+import com.blitz.order.domain.model.OrderEvent;
+import com.blitz.order.domain.model.OrderItem;
+import com.blitz.order.infrastructure.mapper.OrderEventMapper;
 import com.blitz.order.infrastructure.mapper.OrderMapper;
+import com.blitz.order.infrastructure.mapper.OrderItemMapper;
 import com.blitz.product.domain.model.Product;
 import com.blitz.product.infrastructure.mapper.ProductMapper;
 import com.blitz.security.annotation.RequireRole;
@@ -13,6 +17,13 @@ import com.blitz.user.domain.model.User;
 import com.blitz.user.infrastructure.mapper.UserMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
+
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
+import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
 import java.util.Map;
 
@@ -25,6 +36,32 @@ public class AdminController {
     private final ProductMapper productMapper;
     private final UserMapper userMapper;
     private final OrderMapper orderMapper;
+    private final OrderItemMapper orderItemMapper;
+    private final OrderEventMapper orderEventMapper;
+
+    /** GMV trend for last 7 days — real data from paid/shipped/received orders */
+    @GetMapping("/trend/gmv")
+    public Result<Map<String, Object>> gmvTrend() {
+        LocalDate today = LocalDate.now();
+        List<String> labels = new ArrayList<>();
+        List<Long> values = new ArrayList<>();
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("M/d");
+
+        for (int i = 6; i >= 0; i--) {
+            LocalDate date = today.minusDays(i);
+            labels.add(date.format(fmt));
+            // Sum totalAmount of orders with status PAID/SHIPPED/RECEIVED on that date
+            String dateStr = date.toString();
+            Long dayGmv = orderMapper.selectObjs(
+                new LambdaQueryWrapper<Order>()
+                    .select(Order::getTotalAmount)
+                    .apply("DATE(create_time) = {0}", dateStr)
+                    .in(Order::getStatus, 1, 2, 3)
+            ).stream().mapToLong(o -> o != null ? ((Number) o).longValue() : 0).sum();
+            values.add(dayGmv);
+        }
+        return Result.success(Map.of("labels", labels, "values", values));
+    }
 
     @GetMapping("/stats")
     public Result<Map<String, Object>> stats() {
@@ -50,8 +87,15 @@ public class AdminController {
 
     @GetMapping("/orders")
     public Result<IPage<Order>> orders(@RequestParam(defaultValue="1") int page, @RequestParam(defaultValue="10") int size) {
-        return Result.success(orderMapper.selectPage(new Page<>(page, size),
-            new LambdaQueryWrapper<Order>().orderByDesc(Order::getCreateTime)));
+        IPage<Order> result = orderMapper.selectPage(new Page<>(page, size),
+            new LambdaQueryWrapper<Order>().orderByDesc(Order::getCreateTime));
+        // Populate order items for each order
+        for (Order order : result.getRecords()) {
+            List<OrderItem> items = orderItemMapper.selectList(
+                new LambdaQueryWrapper<OrderItem>().eq(OrderItem::getOrderId, order.getId()));
+            order.setItems(items);
+        }
+        return Result.success(result);
     }
 
     @PutMapping("/users/{id}/role")
@@ -88,5 +132,24 @@ public class AdminController {
             userMapper.updateById(u);
         }
         return Result.success();
+    }
+
+    /** Admin refunds an order */
+    @PostMapping("/orders/{id}/refund")
+    public Result<Void> refundOrder(@PathVariable Long id, @RequestBody(required = false) Map<String, String> body) {
+        Order order = orderMapper.selectById(id);
+        if (order == null) return Result.fail(404, "订单不存在");
+        try {
+            order.refund();
+            orderMapper.updateById(order);
+            // Save event
+            String reason = body != null ? body.getOrDefault("reason", "管理员退款") : "管理员退款";
+            OrderEvent event = OrderEvent.create(order.getId(), "ORDER_REFUNDED",
+                "{\"reason\":\"" + reason + "\"}");
+            orderEventMapper.insert(event);
+            return Result.success();
+        } catch (IllegalStateException e) {
+            return Result.fail(400, e.getMessage());
+        }
     }
 }

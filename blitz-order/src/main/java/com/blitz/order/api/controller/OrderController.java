@@ -7,6 +7,7 @@ import com.blitz.order.api.dto.OrderVO;
 import com.blitz.order.application.service.OrderApplicationService;
 import com.blitz.order.application.service.OrderQueryService;
 import com.blitz.security.annotation.RequireRole;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -21,6 +22,7 @@ public class OrderController {
 
     private final OrderApplicationService orderApplicationService;
     private final OrderQueryService orderQueryService;
+    private final HttpServletRequest request;
 
     /** 创建订单 */
     @PostMapping
@@ -35,24 +37,30 @@ public class OrderController {
         return Result.success(orderQueryService.getById(order.getId()));
     }
 
-    /** 查询订单详情（仅订单所有者可查看） */
+    /** 查询订单详情（所有者/管理员/商家可查看） */
     @GetMapping("/{id}")
     public Result<OrderVO> detail(@PathVariable Long id) {
-        Long userId = getCurrentUserId();
         OrderVO order = orderQueryService.getById(id);
         if (order == null) return Result.fail(404, "订单不存在");
-        if (!order.userId().equals(userId)) return Result.fail(403, "无权查看此订单");
+        if (!canAccessOrder(order)) return Result.fail(403, "无权查看此订单");
         return Result.success(order);
     }
 
-    /** 查询订单详情（按订单号，仅订单所有者可查看） */
+    /** 查询订单详情（按订单号） */
     @GetMapping("/no/{orderNo}")
     public Result<OrderVO> detailByNo(@PathVariable String orderNo) {
-        Long userId = getCurrentUserId();
         OrderVO order = orderQueryService.getByOrderNo(orderNo);
         if (order == null) return Result.fail(404, "订单不存在");
-        if (!order.userId().equals(userId)) return Result.fail(403, "无权查看此订单");
+        if (!canAccessOrder(order)) return Result.fail(403, "无权查看此订单");
         return Result.success(order);
+    }
+
+    /** Check if current user can access the given order */
+    private boolean canAccessOrder(OrderVO order) {
+        Long userId = getCurrentUserId();
+        if (order.userId().equals(userId)) return true;
+        String role = (String) request.getAttribute("role");
+        return "ADMIN".equals(role) || "MERCHANT".equals(role);
     }
 
     /** 当前用户订单列表 */
@@ -62,13 +70,14 @@ public class OrderController {
         return Result.success(orderQueryService.listByUser(userId));
     }
 
-    /** 当前用户订单分页 */
+    /** 当前用户订单分页（支持状态筛选） */
     @GetMapping("/page")
     public Result<PageResult<OrderVO>> page(
         @RequestParam(defaultValue = "1") int page,
-        @RequestParam(defaultValue = "10") int size) {
+        @RequestParam(defaultValue = "10") int size,
+        @RequestParam(required = false) String status) {
         Long userId = getCurrentUserId();
-        return Result.success(orderQueryService.pageByUser(userId, page, size));
+        return Result.success(orderQueryService.pageByUser(userId, page, size, status));
     }
 
     /** 支付订单 */
@@ -97,9 +106,9 @@ public class OrderController {
         return Result.success();
     }
 
-    /** 发货（管理员） */
+    /** 发货（管理员/商家） */
     @PostMapping("/{id}/ship")
-    @RequireRole("ADMIN")
+    @RequireRole({"ADMIN", "MERCHANT"})
     public Result<Void> ship(@PathVariable Long id) {
         orderApplicationService.shipOrder(id);
         return Result.success();

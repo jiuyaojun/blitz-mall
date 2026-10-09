@@ -298,12 +298,39 @@
    Coupons Center — Page Logic
    ================================================================ */
 
+var officialCoupons = [];
+var myCouponIds = [];
+
+function loadOfficialCoupons() {
+  api.get('/coupon/official').then(function(res) {
+    officialCoupons = (res.data || []);
+    loadMyCoupons();
+  }).catch(function() {
+    officialCoupons = [];
+    renderCoupons();
+  });
+}
+
+function loadMyCoupons() {
+  if (!AUTH.isLoggedIn()) { renderCoupons(); return; }
+  api.get('/coupon/my').then(function(res) {
+    var myList = (res.data || []);
+    myCouponIds = [];
+    for (var i = 0; i < myList.length; i++) {
+      myCouponIds.push(myList[i].coupon_id);
+    }
+    renderCoupons();
+  }).catch(function() {
+    myCouponIds = [];
+    renderCoupons();
+  });
+}
+
 function renderCoupons() {
-  COUPONS.init();
-  var coupons = COUPONS.getAll();
+  var all = officialCoupons;
   var grid = document.getElementById('couponsGrid');
 
-  if (!coupons || coupons.length === 0) {
+  if (!all || all.length === 0) {
     grid.innerHTML =
       '<div class="coupons-empty">' +
         '<div class="empty-icon">🎫</div>' +
@@ -313,30 +340,29 @@ function renderCoupons() {
     return;
   }
 
-  grid.innerHTML = coupons.map(function(c) {
-    var isUsed = c.used === true;
-    var isFree = c.minSpend === 0;
+  grid.innerHTML = all.map(function(c) {
+    var isClaimed = myCouponIds.indexOf(c.id) !== -1;
+    var amount = c.discount_value || 0;
 
     var amountHTML =
-      '<div class="cp-amount"><span class="cp-unit">¥</span>' + c.amount + '</div>';
+      '<div class="cp-amount"><span class="cp-unit">¥</span>' + amount + '</div>';
 
-    var tagHTML = isFree
+    var tagHTML = (c.min_spend === 0)
       ? '<div class="cp-tag">无门槛</div>'
-      : '<div class="cp-tag">满' + c.minSpend + '可用</div>';
+      : '<div class="cp-tag">满' + c.min_spend + '可用</div>';
 
-    var condText = isFree
-      ? '<span class="cp-free-hint">无门槛使用</span>'
-      : '满 ' + c.minSpend + ' 元可用';
+    var condText = (c.min_spend === 0)
+      ? '无门槛使用'
+      : '满 ' + c.min_spend + ' 元可用';
 
-    var actionHTML = isUsed
+    var actionHTML = isClaimed
       ? '<span class="cp-badge">✅ 已领取</span>'
       : '<button class="cp-claim-btn" data-coupon-id="' + c.id + '">立即领取</button>';
 
-    // Used stamp overlay
-    var stampHTML = isUsed ? '<div class="cp-used-stamp">已领取</div>' : '';
+    var stampHTML = isClaimed ? '<div class="cp-used-stamp">已领取</div>' : '';
 
     return '' +
-      '<div class="coupon-card' + (isUsed ? ' used' : '') + '" data-id="' + c.id + '">' +
+      '<div class="coupon-card' + (isClaimed ? ' used' : '') + '" data-id="' + c.id + '">' +
         stampHTML +
         '<div class="cp-left">' +
           amountHTML +
@@ -344,9 +370,9 @@ function renderCoupons() {
         '</div>' +
         '<div class="cp-right">' +
           '<div>' +
-            '<div class="cp-name">' + c.name + '</div>' +
+            '<div class="cp-name">' + (c.name || '优惠券') + '</div>' +
             '<div class="cp-cond">' + condText + '</div>' +
-            '<div class="cp-expire">有效期至 ' + c.expire + '</div>' +
+            '<div class="cp-expire">有效期至 ' + (c.end_time || '2026-12-31') + '</div>' +
           '</div>' +
           '<div class="cp-action">' +
             actionHTML +
@@ -359,16 +385,22 @@ function renderCoupons() {
   grid.querySelectorAll('.cp-claim-btn').forEach(function(btn) {
     btn.addEventListener('click', function(e) {
       e.stopPropagation();
-      var couponId = btn.getAttribute('data-coupon-id');
+      if (!AUTH.isLoggedIn()) {
+        showToast('请先登录再领取优惠券', 'warning');
+        return;
+      }
+      var couponId = parseInt(btn.getAttribute('data-coupon-id'));
       if (!couponId) return;
-
-      // Ensure coupons exist then mark as used
-      COUPONS.init();
-      COUPONS.use(couponId);
-      showToast('领取成功', 'success');
-
-      // Re-render to reflect the change
-      renderCoupons();
+      btn.disabled = true;
+      btn.textContent = '领取中...';
+      api.claimCoupon(couponId).then(function() {
+        showToast('领取成功', 'success');
+        loadMyCoupons();
+      }).catch(function(err) {
+        showToast('领取失败: ' + (err.message || '请重试'), 'error');
+        btn.disabled = false;
+        btn.textContent = '立即领取';
+      });
     });
   });
 }
@@ -379,7 +411,7 @@ function renderCoupons() {
 document.addEventListener('DOMContentLoaded', function() {
   renderNavbar('coupons');
   initMobileNav('coupons');
-  renderCoupons();
+  loadOfficialCoupons();
 });
 </script>
 </body>

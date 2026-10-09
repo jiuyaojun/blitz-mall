@@ -99,7 +99,7 @@ class ChatApplicationServiceTest {
             ChatMessage msg2 = ChatMessage.of(1L, ChatMessage.ROLE_AI, "hi there");
             when(messageRepository.findBySessionId(1L)).thenReturn(List.of(msg1, msg2));
 
-            List<ChatMessage> result = chatApplicationService.getMessages(1L);
+            List<ChatMessage> result = chatApplicationService.getMessages(1L, 1L);
 
             assertThat(result).hasSize(2);
             assertThat(result.get(0).getContent()).isEqualTo("hello");

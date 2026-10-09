@@ -404,7 +404,6 @@ function loadMobileCategories() {
 /* ================================================================
    Toast Notifications
    ================================================================ */
-let _toastTimer = null;
 function showToast(msg, type) {
   type = type || 'info';
   let container = document.getElementById('toast-container');
@@ -418,8 +417,10 @@ function showToast(msg, type) {
   el.className = 'toast toast-' + type;
   el.textContent = msg;
   container.appendChild(el);
-  clearTimeout(_toastTimer);
-  _toastTimer = setTimeout(() => { el.remove(); }, 3000);
+  // Each toast gets its own cleanup timer; auto-remove after 3s
+  var timer = setTimeout(() => { el.remove(); }, 3000);
+  // Store timer on element so rapid toasts don't interfere with each other
+  el._timer = timer;
 }
 
 /* ================================================================
@@ -507,6 +508,7 @@ function createStarInput(containerId, onChange) {
     star.textContent = '★';
     star.dataset.value = i;
     star.addEventListener('click', () => {
+      container.dataset.value = i;
       container.querySelectorAll('.star').forEach((s, idx) => {
         s.classList.toggle('active', idx < i);
       });
@@ -675,6 +677,12 @@ function renderPagination(containerId, page, totalPages, onPageChange) {
    Status Labels
    ================================================================ */
 function statusLabel(s) {
+  // Map both integer codes (0-5) and string codes
+  if (typeof s === 'number' || /^\d+$/.test(String(s))) {
+    const code = parseInt(s, 10);
+    const intMap = {0:'待支付', 1:'已支付', 2:'已发货', 3:'已收货', 4:'已取消', 5:'已退款'};
+    return intMap[code] || ('状态' + code);
+  }
   const map = {
     PENDING: '待支付', PENDING_PAYMENT: '待支付',
     PAID: '已支付', SHIPPED: '已发货',
@@ -682,6 +690,27 @@ function statusLabel(s) {
     CANCELLED: '已取消', REFUNDED: '已退款'
   };
   return map[s] || s || '未知';
+}
+
+/** Normalize order status to string code for comparison */
+function statusCode(s) {
+  if (typeof s === 'number' || /^\d+$/.test(String(s))) {
+    const intMap = {0:'PENDING_PAYMENT', 1:'PAID', 2:'SHIPPED', 3:'RECEIVED', 4:'CANCELLED', 5:'REFUNDED'};
+    return intMap[parseInt(s, 10)] || 'UNKNOWN';
+  }
+  return (s || 'UNKNOWN').toUpperCase();
+}
+
+/** Normalize order objects: convert numeric status to string, add statusCode field */
+function normalizeOrders(orders) {
+  if (!orders) return orders;
+  (Array.isArray(orders) ? orders : [orders]).forEach(function(o) {
+    if (o) {
+      o._status = o.status;
+      o.status = statusCode(o.status);
+    }
+  });
+  return orders;
 }
 
 /* ================================================================
@@ -898,10 +927,10 @@ var AI_CHAT = {
   }
 };
 
-// Auto-init AI chat on page load
+// Auto-init AI chat on page load (only if user is logged in and page has required DOM)
 document.addEventListener('DOMContentLoaded', function() {
-  setTimeout(function() { AI_CHAT.init(); }, 500);
-  setTimeout(function() { SEARCH_AC.init(); }, 600);
+  setTimeout(function() { if (AUTH.isLoggedIn()) AI_CHAT.init(); }, 500);
+  setTimeout(function() { if (document.querySelector('.nav-search')) SEARCH_AC.init(); }, 600);
 });
 
 /* Coupon System — localStorage demo */

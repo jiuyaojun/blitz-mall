@@ -53,6 +53,18 @@ public class ReviewController {
         return Result.success(review);
     }
 
+    /** Get current user's reviews */
+    @GetMapping("/my")
+    public Result<IPage<Review>> myReviews(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        Long userId = getCurrentUserId();
+        LambdaQueryWrapper<Review> qw = new LambdaQueryWrapper<>();
+        qw.eq(Review::getUserId, userId);
+        qw.orderByDesc(Review::getCreateTime);
+        return Result.success(reviewMapper.selectPage(new Page<>(page, size), qw));
+    }
+
     /** Like a review (mark as helpful) */
     @PostMapping("/{id}/like")
     public Result<Void> like(@PathVariable Long id) {

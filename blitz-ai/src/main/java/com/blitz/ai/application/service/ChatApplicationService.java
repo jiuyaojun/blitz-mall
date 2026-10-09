@@ -74,8 +74,13 @@ public class ChatApplicationService {
             });
     }
 
-    /** 获取会话消息列表 */
-    public List<ChatMessage> getMessages(Long sessionId) {
+    /** 获取会话消息列表（带所有权验证） */
+    public List<ChatMessage> getMessages(Long sessionId, Long userId) {
+        ChatSession session = sessionRepository.findById(sessionId)
+            .orElseThrow(() -> new RuntimeException("Session not found"));
+        if (!session.getUserId().equals(userId)) {
+            throw new RuntimeException("Access denied");
+        }
         return messageRepository.findBySessionId(sessionId);
     }
 }

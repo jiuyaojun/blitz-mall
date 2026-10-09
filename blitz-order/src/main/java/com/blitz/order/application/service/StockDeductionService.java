@@ -68,12 +68,36 @@ public class StockDeductionService {
     public void restoreStock(Long orderId) {
         List<OrderItem> items = orderItemRepository.findByOrderId(orderId);
         for (OrderItem item : items) {
-            SkuStock stock = skuStockRepository.findBySkuId(item.getSkuId()).orElse(null);
-            if (stock != null) {
-                int currentStock = stock.getStock() != null ? stock.getStock() : 0;
-                stock.setStock(currentStock + item.getQuantity());
-                skuStockRepository.save(stock);
-                log.info("Stock restored: skuId={}, qty={}", item.getSkuId(), item.getQuantity());
+            boolean restored = false;
+            for (int retry = 0; retry < 3; retry++) {
+                SkuStock stock = skuStockRepository.findBySkuId(item.getSkuId()).orElse(null);
+                if (stock != null) {
+                    int currentStock = stock.getStock() != null ? stock.getStock() : 0;
+                    stock.setStock(currentStock + item.getQuantity());
+                    // Use optimistic lock update to prevent double-restore in concurrent cancellations
+                    int affected = skuStockRepository.updateStockWithVersion(
+                        stock.getSkuId(), stock.getStock(), stock.getVersion());
+                    if (affected > 0) {
+                        log.info("Stock restored: skuId={}, qty={}", item.getSkuId(), item.getQuantity());
+                        restored = true;
+                        break;
+                    }
+                    log.warn("Stock restore retry {}/{}: skuId={}, version={}",
+                        retry + 1, 3, item.getSkuId(), stock.getVersion());
+                } else {
+                    // Stock record doesn't exist, nothing to restore
+                    restored = true;
+                    break;
+                }
+                // Brief wait before retry
+                try { Thread.sleep(50L * (retry + 1)); } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    break;
+                }
+            }
+            if (!restored) {
+                log.error("Failed to restore stock after retries: skuId={}, orderId={}",
+                    item.getSkuId(), orderId);
             }
         }
     }

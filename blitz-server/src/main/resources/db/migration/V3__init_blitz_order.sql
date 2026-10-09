@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS order_item (
     order_id BIGINT NOT NULL,
     sku_id BIGINT NOT NULL,
     sku_name VARCHAR(255) NOT NULL,
-    sku_spec JSON DEFAULT NULL,
+    sku_spec VARCHAR(512) DEFAULT NULL,
     price DECIMAL(10,2) NOT NULL,
     quantity INT NOT NULL,
     create_time DATETIME DEFAULT CURRENT_TIMESTAMP,

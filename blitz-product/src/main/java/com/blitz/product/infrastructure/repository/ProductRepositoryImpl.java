@@ -36,26 +36,43 @@ public class ProductRepositoryImpl implements ProductRepository {
     }
 
     @Override
+    public void deleteById(Long id) {
+        productMapper.deleteById(id);
+    }
+
+    @Override
     public List<Product> findAll() {
         return productMapper.selectList(null);
     }
 
     @Override
-    public List<Product> findAll(int page, int size) {
-        IPage<Product> p = productMapper.selectPage(
-            new Page<>(page, size),
-            new LambdaQueryWrapper<Product>().orderByDesc(Product::getCreateTime)
-        );
+    public List<Product> findAll(int page, int size, String sort) {
+        LambdaQueryWrapper<Product> qw = buildSort(new LambdaQueryWrapper<Product>(), sort);
+        IPage<Product> p = productMapper.selectPage(new Page<>(page, size), qw);
         return p.getRecords();
     }
 
     @Override
-    public List<Product> findByCategoryId(Long categoryId, int page, int size) {
-        IPage<Product> p = productMapper.selectPage(
-            new Page<>(page, size),
-            new LambdaQueryWrapper<Product>().eq(Product::getCategoryId, categoryId)
+    public List<Product> findByShopId(Long shopId) {
+        return productMapper.selectList(
+            new LambdaQueryWrapper<Product>().eq(Product::getShopId, shopId)
         );
+    }
+
+    @Override
+    public List<Product> findByCategoryId(Long categoryId, int page, int size, String sort) {
+        LambdaQueryWrapper<Product> qw = buildSort(
+            new LambdaQueryWrapper<Product>().eq(Product::getCategoryId, categoryId), sort);
+        IPage<Product> p = productMapper.selectPage(new Page<>(page, size), qw);
         return p.getRecords();
+    }
+
+    private LambdaQueryWrapper<Product> buildSort(LambdaQueryWrapper<Product> qw, String sort) {
+        if ("sales".equals(sort))      return qw.orderByDesc(Product::getSaleCount);
+        if ("price_asc".equals(sort))  return qw.orderByAsc(Product::getId); // price via SKU, fallback
+        if ("price_desc".equals(sort)) return qw.orderByDesc(Product::getId);
+        if ("newest".equals(sort))     return qw.orderByDesc(Product::getCreateTime);
+        return qw.orderByDesc(Product::getCreateTime); // default
     }
 
     @Override

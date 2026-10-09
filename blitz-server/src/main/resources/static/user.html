@@ -395,6 +395,7 @@
         orders = [];
         orderTotalPages = 1;
       }
+      normalizeOrders(orders);
 
       if (!orders || orders.length === 0) {
         container.innerHTML = '';
@@ -448,7 +449,7 @@
     orders.forEach(function(o) {
       var id = o.id;
       var orderNo = o.orderNo || ('#' + id);
-      var productName = o.productName || o.itemName || '商品';
+      var productName = (o.items && o.items.length > 0) ? o.items[0].skuName : '商品';
       var amount = o.totalAmount || o.amount || 0;
       var status = o.status || 'PENDING';
       var time = o.createTime || o.createdAt || '';
@@ -531,8 +532,7 @@
     // Use payOrder as a generic "advance status" or just show success
     // The backend may have a dedicated endpoint; we try shipping/receive
     api.getOrder(orderId).then(function(res) {
-      if (res.data && res.data.status === 'SHIPPED') {
-        // Simulate receive by calling a status update
+      if (res.data && statusCode(res.data.status) === 'SHIPPED') {
         return api.request('POST', '/order/' + orderId + '/receive');
       }
       return Promise.resolve();
@@ -570,17 +570,17 @@
   ];
 
   function renderOrderTimeline(order) {
+    normalizeOrders([order]);
     var status = order.status || 'PENDING';
-    // Normalize PENDING to PENDING_PAYMENT
-    var current = status === 'PENDING' ? 'PENDING_PAYMENT' : status;
+    var current = status;
 
     // Determine which timeline steps are done/active
     var currentIdx = -1;
     if (current === 'CANCELLED' || current === 'REFUNDED') {
       // For cancelled/refunded, find the last completed step before cancellation
       // Use order status history or infer from available timestamps
-      if (order.shipTime || order.shippedAt) currentIdx = 2;
-      else if (order.payTime || order.paidAt) currentIdx = 1;
+      if (order.deliveryTime || order.shipTime || order.shippedAt) currentIdx = 2;
+      else if (order.paymentTime || order.payTime || order.paidAt) currentIdx = 1;
       else currentIdx = 0;
     } else {
       for (var i = 0; i < ORDER_TIMELINE_STEPS.length; i++) {
@@ -604,8 +604,8 @@
     // Time helpers
     function stepTime(key) {
       if (key === 'PENDING_PAYMENT') return order.createTime || order.createdAt;
-      if (key === 'PAID') return order.payTime || order.paidAt;
-      if (key === 'SHIPPED') return order.shipTime || order.shippedAt;
+      if (key === 'PAID') return order.paymentTime || order.payTime || order.paidAt;
+      if (key === 'SHIPPED') return order.deliveryTime || order.shipTime || order.shippedAt;
       if (key === 'RECEIVED') return order.receiveTime || order.receivedAt || order.completeTime || order.completedAt;
       return null;
     }
@@ -693,9 +693,9 @@
 
       var prodHtml = '';
       items.forEach(function(item) {
-        var img = item.image || item.productImage || item.mainImage || '';
-        var name = item.name || item.productName || '商品';
-        var price = item.price != null ? item.price : item.unitPrice;
+        var img = item.image || item.mainImage || '';
+        var name = item.skuName || item.name || item.productName || '商品';
+        var price = item.price || 0;
         var qty = item.quantity != null ? item.quantity : 1;
         prodHtml +=
           '<div style="display:flex;align-items:center;padding:10px 12px;border-bottom:1px solid var(--border-light);gap:12px">' +
@@ -711,8 +711,8 @@
 
       // Price summary
       var totalAmount = order.totalAmount || order.amount || 0;
-      var freight = order.freight || order.shipping || order.shippingFee || 0;
-      var discount = order.discount || order.couponAmount || 0;
+      var freight = order.freightAmount || order.freight || order.shipping || 0;
+      var discount = order.discountAmount || order.discount || order.couponAmount || 0;
       var summaryHtml =
         '<div style="display:flex;justify-content:space-between;margin-bottom:6px"><span class="text-muted">商品总额</span><span>' + formatPrice(totalAmount + discount - freight) + '</span></div>' +
         (freight > 0 ? '<div style="display:flex;justify-content:space-between;margin-bottom:6px"><span class="text-muted">运费</span><span>' + formatPrice(freight) + '</span></div>' : '') +
@@ -791,8 +791,8 @@
       e.preventDefault();
 
       var data = {
-        name: document.getElementById('addrName').value.trim(),
-        phone: document.getElementById('addrPhone').value.trim(),
+        receiverName: document.getElementById('addrName').value.trim(),
+        receiverPhone: document.getElementById('addrPhone').value.trim(),
         province: document.getElementById('addrProvince').value.trim(),
         city: document.getElementById('addrCity').value.trim(),
         district: document.getElementById('addrDistrict').value.trim(),
@@ -807,8 +807,8 @@
       // Build full address string for backend compatibility
       var full = (data.province || '') + (data.city || '') + (data.district || '') + data.detail;
       var payload = {
-        name: data.name,
-        phone: data.phone,
+        receiverName: data.receiverName || data.name,
+        receiverPhone: data.receiverPhone || data.phone,
         province: data.province,
         city: data.city,
         district: data.district,
@@ -926,8 +926,8 @@
     }
 
     // Try to load reviews by user ID across all products
-    // The backend endpoint is /review/list/:productId — we try productId=0 with userId filter
-    api.getReviews(0, { userId: user.id, size: 50 }).then(function(res) {
+    // Use dedicated /review/my endpoint to get current user's reviews
+    api.getMyReviews({ size: 50 }).then(function(res) {
       var reviews = res.data;
       if (!Array.isArray(reviews)) reviews = (reviews && reviews.records) ? reviews.records : (reviews && reviews.list) ? reviews.list : [];
 
@@ -941,23 +941,37 @@
       reviews.forEach(function(r) {
         var starsHtml = renderStars(r.rating || r.score || 5);
         var imagesHtml = '';
-        if (r.images) {
-          var imgs = Array.isArray(r.images) ? r.images : (typeof r.images === 'string' ? r.images.split(',').filter(Boolean) : []);
+        var imgs = [];
+        try {
+          if (r.images) {
+            imgs = typeof r.images === 'string' ? JSON.parse(r.images) : r.images;
+          }
+        } catch(e) { imgs = []; }
+        if (Array.isArray(imgs) && imgs.length > 0) {
           imagesHtml = '<div class="review-images">' +
-            imgs.map(function(img) { return '<img src="' + img.trim() + '" alt="review image" loading="lazy">'; }).join('') +
+            imgs.filter(function(u) { return u && u.length > 0; }).map(function(img) {
+              return '<img src="' + img + '" alt="review" loading="lazy">';
+            }).join('') +
             '</div>';
         }
 
+        // Merchant reply
+        var replyHtml = '';
+        if (r.reply) {
+          replyHtml = '<div class="review-reply"><span class="reply-tag">商家回复</span>' + r.reply + '</div>';
+        }
+
         var card = document.createElement('div');
-        card.className = 'review-card';
+        card.className = 'review-item';
         card.innerHTML =
           '<div class="review-header">' +
-            '<span class="review-product">' + (r.productName || r.product || '商品') + '</span>' +
+            '<span class="review-product">' + (r.skuName || r.productName || ('商品#' + r.productId) || '商品') + '</span>' +
             '<span class="review-stars">' + starsHtml + '</span>' +
             '<span class="review-date">' + formatTime(r.createTime || r.createdAt) + '</span>' +
           '</div>' +
           '<div class="review-text">' + (r.content || r.text || r.comment || '') + '</div>' +
-          imagesHtml;
+          imagesHtml +
+          replyHtml;
 
         container.appendChild(card);
       });
@@ -1024,18 +1038,25 @@
   function loadCoupons() {
     var list = document.getElementById('couponsList');
     var empty = document.getElementById('couponsEmpty');
-    var coupons = COUPONS.getAll();
-    if (coupons.length === 0) { list.innerHTML = ''; empty.classList.remove('hidden'); return; }
-    empty.classList.add('hidden');
-    list.innerHTML = coupons.map(function(c) {
-      return '<div class="coupon-card' + (c.used ? ' used' : '') + '">' +
-        '<div class="cp-amount"><span class="cp-unit">¥</span>' + c.amount + '</div>' +
-        '<div class="cp-info"><div class="cp-name">' + c.name + '</div>' +
-        '<div class="cp-cond">满' + c.minSpend + '元可用</div>' +
-        '<div class="cp-expire">有效期至 ' + c.expire + '</div></div>' +
-        (c.used ? '<div class="cp-btn">已使用</div>' : '<div class="cp-btn">去使用</div>') +
-      '</div>';
-    }).join('');
+
+    api.get('/coupon/my').then(function(res) {
+      var coupons = (res.data || []);
+      if (coupons.length === 0) { list.innerHTML = ''; empty.classList.remove('hidden'); return; }
+      empty.classList.add('hidden');
+      list.innerHTML = coupons.map(function(uc) {
+        var isUsed = uc.status === 'USED';
+        return '<div class="coupon-card' + (isUsed ? ' used' : '') + '">' +
+          '<div class="cp-amount"><span class="cp-unit">¥</span>' + (uc.discount_value || 0) + '</div>' +
+          '<div class="cp-info"><div class="cp-name">' + (uc.name || '优惠券') + '</div>' +
+          '<div class="cp-cond">' + (uc.discount_type === 'PERCENTAGE' ? uc.discount_value + '%折扣' : '满' + (uc.min_spend || 0) + '元可用') + '</div>' +
+          '<div class="cp-expire">' + (isUsed ? '已使用' : '未使用') + '</div></div>' +
+          (isUsed ? '<div class="cp-btn">已使用</div>' : '<div class="cp-btn">去使用</div>') +
+        '</div>';
+      }).join('');
+    }).catch(function() {
+      list.innerHTML = '';
+      empty.classList.remove('hidden');
+    });
   }
 
   /* ================================================================

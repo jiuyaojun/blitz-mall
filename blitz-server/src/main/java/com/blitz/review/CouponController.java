@@ -3,8 +3,10 @@ package com.blitz.review;
 import com.blitz.common.result.Result;
 import com.blitz.security.annotation.RequireRole;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -31,20 +33,29 @@ public class CouponController {
 
     @RequireRole("USER")
     @PostMapping("/claim/{couponId}")
+    @Transactional
     public Result<Void> claim(@PathVariable Long couponId) {
         Long userId = getCurrentUserId();
         // Check already claimed
         Integer count = jdbc.queryForObject(
             "SELECT COUNT(*) FROM user_coupon WHERE user_id=? AND coupon_id=?", Integer.class, userId, couponId);
         if (count != null && count > 0) return Result.fail(400, "已领取过该优惠券");
-        // Check stock
-        Map<String,Object> c = jdbc.queryForMap("SELECT * FROM coupon WHERE id=?", couponId);
-        if (c == null || c.isEmpty()) return Result.fail(404, "优惠券不存在");
-        int claimed = ((Number)c.get("claimed_count")).intValue();
-        int total = ((Number)c.get("total_count")).intValue();
-        if (claimed >= total) return Result.fail(400, "优惠券已抢光");
-        // Claim
-        jdbc.update("UPDATE coupon SET claimed_count=claimed_count+1 WHERE id=?", couponId);
+        // Check existence and stock atomically with conditional UPDATE
+        // Use UPDATE ... WHERE claimed_count < total_count to prevent oversell race
+        int updated = jdbc.update(
+            "UPDATE coupon SET claimed_count = claimed_count + 1 WHERE id = ? AND claimed_count < total_count", couponId);
+        if (updated == 0) {
+            // Either coupon doesn't exist or sold out — check which
+            try {
+                Map<String,Object> c = jdbc.queryForMap("SELECT id, total_count, claimed_count FROM coupon WHERE id=?", couponId);
+                int claimed = ((Number)c.get("claimed_count")).intValue();
+                int total = ((Number)c.get("total_count")).intValue();
+                if (claimed >= total) return Result.fail(400, "优惠券已抢光");
+                return Result.fail(404, "优惠券不存在");
+            } catch (EmptyResultDataAccessException e) {
+                return Result.fail(404, "优惠券不存在");
+            }
+        }
         jdbc.update("INSERT INTO user_coupon (user_id, coupon_id, status) VALUES (?,?,'UNUSED')", userId, couponId);
         return Result.success();
     }

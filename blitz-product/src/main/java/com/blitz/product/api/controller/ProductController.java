@@ -26,8 +26,12 @@ public class ProductController {
     public Result<PageResult<ProductVO>> listByCategory(
             @RequestParam(required = false) Long categoryId,
             @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "10") int size) {
-        return Result.success(productApplicationService.listByCategory(categoryId, page, size));
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String sort,
+            @RequestParam(required = false) String brand,
+            @RequestParam(required = false) String priceMin,
+            @RequestParam(required = false) String priceMax) {
+        return Result.success(productApplicationService.listByCategory(categoryId, page, size, sort));
     }
 
     @GetMapping("/search")

@@ -335,7 +335,7 @@
       renderAddresses();
       // Auto-select first address if none selected
       if (!selectedAddressId && addresses.length > 0) {
-        selectAddress(addresses[0].id);
+        checkoutSelectAddress(addresses[0].id);
       }
     } catch (e) {
       addresses = [];
@@ -362,7 +362,7 @@
       html +=
         '<div class="address-card' + (isSelected ? ' selected' : '') + '" data-id="' + addr.id + '" onclick="checkoutSelectAddress(' + addr.id + ')">' +
           '<div class="addr-header">' +
-            '<span class="addr-name">' + escHtml(addr.name || addr.consignee || '') + '</span>' +
+            '<span class="addr-name">' + escHtml(addr.receiverName || addr.name || addr.consignee || '') + '</span>' +
             (addr.isDefault || addr.defaulted ? '<span class="addr-tag">默认</span>' : '') +
             '<span class="addr-actions" style="margin-left:auto">' +
               '<button onclick="event.stopPropagation();checkoutEditAddress(' + addr.id + ')" title="编辑">✏️</button>' +
@@ -370,7 +370,7 @@
             '</span>' +
           '</div>' +
           '<div class="addr-detail">' + escHtml(fullAddress) + '</div>' +
-          '<div class="addr-phone">' + escHtml(addr.phone || addr.mobile || '') + '</div>' +
+          '<div class="addr-phone">' + escHtml(addr.receiverPhone || addr.phone || addr.mobile || '') + '</div>' +
         '</div>';
     });
     $addressList.innerHTML = html;
@@ -450,20 +450,19 @@
     e.preventDefault();
 
     var addrData = {
-      name: document.getElementById('addrName').value.trim(),
-      phone: document.getElementById('addrPhone').value.trim(),
+      receiverName: document.getElementById('addrName').value.trim(),
+      receiverPhone: document.getElementById('addrPhone').value.trim(),
       province: document.getElementById('addrProvince').value.trim(),
       city: document.getElementById('addrCity').value.trim(),
       district: document.getElementById('addrDistrict').value.trim(),
       detail: document.getElementById('addrDetail').value.trim(),
-      zip: document.getElementById('addrZip').value.trim() || undefined,
-      isDefault: document.getElementById('addrDefault').checked
+      isDefault: document.getElementById('addrDefault').checked ? 1 : 0
     };
 
     // Validation
-    if (!addrData.name) { showToast('请输入收货人姓名', 'warning'); return; }
-    if (!addrData.phone) { showToast('请输入手机号码', 'warning'); return; }
-    if (!/^1[3-9]\d{9}$/.test(addrData.phone)) { showToast('手机号格式不正确', 'warning'); return; }
+    if (!addrData.receiverName) { showToast('请输入收货人姓名', 'warning'); return; }
+    if (!addrData.receiverPhone) { showToast('请输入手机号码', 'warning'); return; }
+    if (!/^1[3-9]\d{9}$/.test(addrData.receiverPhone)) { showToast('手机号格式不正确', 'warning'); return; }
     if (!addrData.province) { showToast('请输入省份', 'warning'); return; }
     if (!addrData.city) { showToast('请输入城市', 'warning'); return; }
     if (!addrData.district) { showToast('请输入区/县', 'warning'); return; }
@@ -545,11 +544,16 @@
       var sel = document.getElementById('couponSelect');
       sel.innerHTML = '<option value="">不使用优惠券</option>';
       coupons.forEach(function(c) {
+        var opt = document.createElement('option');
+        opt.value = c.id;
+        opt.setAttribute('data-discount', c.discount_value);
+        opt.setAttribute('data-type', c.discount_type);
         var label = c.name + ' (';
         if (c.discount_type === 'PERCENTAGE') label += c.discount_value + '%折扣';
         else label += '满' + c.min_spend + '减' + c.discount_value;
         label += ')';
-        sel.innerHTML += '<option value="' + c.id + '" data-discount="' + c.discount_value + '" data-type="' + c.discount_type + '">' + label + '</option>';
+        opt.textContent = label;
+        sel.appendChild(opt);
       });
       if (coupons.length === 0) {
         document.getElementById('couponHint').textContent = '（暂无可用优惠券）';
@@ -614,25 +618,50 @@
     var hasError = false;
 
     try {
+      // Find the selected address details
+      var selAddr = null;
+      for (var a = 0; a < addresses.length; a++) {
+        if (addresses[a].id === selectedAddressId) { selAddr = addresses[a]; break; }
+      }
+      if (!selAddr) {
+        showToast('请重新选择收货地址', 'warning');
+        isSubmitting = false;
+        $btnSubmit.disabled = false;
+        $btnSubmit.classList.remove('btn-loading');
+        $btnSubmit.textContent = '提交订单';
+        return;
+      }
+
+      // Build items array and receiver info matching CreateOrderRequest
+      var items = [];
       for (var i = 0; i < checkedItems.length; i++) {
         var item = checkedItems[i];
-        var orderData = {
-          productId: item.productId,
-          skuId: item.skuId || null,
-          quantity: item.quantity,
-          addressId: selectedAddressId
-        };
+        items.push({
+          skuId: item.skuId || 0,
+          skuName: item.name || item.skuName || item.title || '',
+          skuSpec: (function(s) { if (!s) return ''; if (typeof s === 'object') return JSON.stringify(s); return String(s); })(item.spec || item.skuSpec),
+          price: item.price || 0,
+          quantity: item.quantity || 1
+        });
+      }
 
-        var res = await api.createOrder(orderData);
-        if (res && res.data) {
-          // Extract order id from response
-          var orderId = res.data.id || res.data.orderId || res.data;
-          if (typeof orderId === 'object') {
-            orderId = orderId.id || orderId.orderId;
-          }
-          if (orderId) {
-            orderIds.push(orderId);
-          }
+      var orderData = {
+        items: items,
+        receiverName: selAddr.receiverName || selAddr.name || '',
+        receiverPhone: selAddr.receiverPhone || selAddr.phone || '',
+        receiverAddress: [selAddr.province, selAddr.city, selAddr.district, selAddr.detail]
+          .filter(Boolean).join(' '),
+        note: ''
+      };
+
+      var res = await api.createOrder(orderData);
+      if (res && res.data) {
+        var orderId = res.data.id || res.data.orderId || res.data;
+        if (typeof orderId === 'object') {
+          orderId = orderId.id || orderId.orderId;
+        }
+        if (orderId) {
+          orderIds.push(orderId);
         }
       }
 
@@ -641,8 +670,6 @@
 
       showToast('订单提交成功！', 'success');
 
-      // Redirect to payment page(s)
-      // Use the first order ID; if multiple orders, concatenate
       var redirectOrderId = orderIds.length > 0 ? orderIds.join(',') : '';
       setTimeout(function() {
         if (redirectOrderId) {

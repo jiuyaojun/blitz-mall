@@ -11,12 +11,15 @@ import com.blitz.order.infrastructure.messaging.OrderEventPublisher;
 import com.blitz.order.infrastructure.mapper.OrderOperateLogMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import cn.hutool.json.JSONUtil;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Service
@@ -26,9 +29,12 @@ public class OrderApplicationService {
     private final OrderRepository orderRepository;
     private final OrderItemRepository orderItemRepository;
     private final OrderEventRepository orderEventRepository;
-    private OrderEventPublisher orderEventPublisher;
     private final OrderOperateLogMapper orderOperateLogMapper;
     private final StockDeductionService stockDeductionService;
+
+    // Optional injection: only available in non-minimal profiles
+    @Autowired(required = false)
+    private OrderEventPublisher orderEventPublisher;
 
     /**
      * 创建订单（核心链路）
@@ -81,7 +87,7 @@ public class OrderApplicationService {
 
         // 6. 保存领域事件
         OrderEvent event = OrderEvent.create(order.getId(),
-            OrderEvent.ORDER_CREATED, "{\"orderNo\":\"" + orderNo + "\"}");
+            OrderEvent.ORDER_CREATED, JSONUtil.toJsonStr(Map.of("orderNo", orderNo)));
         orderEventRepository.save(event);
 
         // 7. 保存操作日志
@@ -115,7 +121,7 @@ public class OrderApplicationService {
 
         // 保存事件
         OrderEvent event = OrderEvent.create(order.getId(),
-            OrderEvent.ORDER_PAID, "{\"paymentMethod\":" + paymentMethod + "}");
+            OrderEvent.ORDER_PAID, JSONUtil.toJsonStr(Map.of("paymentMethod", paymentMethod)));
         orderEventRepository.save(event);
 
         // 操作日志
@@ -151,7 +157,7 @@ public class OrderApplicationService {
 
         // 保存事件
         OrderEvent event = OrderEvent.create(order.getId(),
-            OrderEvent.ORDER_CANCELLED, "{\"reason\":\"" + reason + "\"}");
+            OrderEvent.ORDER_CANCELLED, JSONUtil.toJsonStr(Map.of("reason", reason)));
         orderEventRepository.save(event);
 
         // 操作日志

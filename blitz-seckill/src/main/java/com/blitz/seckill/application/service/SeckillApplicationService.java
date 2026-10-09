@@ -10,6 +10,7 @@ import com.blitz.seckill.domain.port.SeckillProductRepository;
 import com.blitz.seckill.infrastructure.kafka.SeckillOrderMessage;
 import com.blitz.seckill.infrastructure.kafka.SeckillOrderProducer;
 import com.blitz.seckill.infrastructure.redis.SeckillStockRedisService;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RRateLimiter;
@@ -19,6 +20,7 @@ import org.redisson.api.RedissonClient;
 import org.springframework.stereotype.Service;
 
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 秒杀核心应用服务——编排 8 步秒杀链路
@@ -35,6 +37,18 @@ public class SeckillApplicationService {
     private final SeckillPathService seckillPathService;
     private final SeckillOrderProducer orderProducer;
     private final RedissonClient redissonClient;
+
+    private final Map<Long, RRateLimiter> userRateLimiters = new ConcurrentHashMap<>();
+
+    /** Pre-configure default rate limiter parameters (called once per user at first request) */
+    private RRateLimiter getOrCreateRateLimiter(Long userId) {
+        return userRateLimiters.computeIfAbsent(userId, uid -> {
+            String key = "seckill:ratelimit:user:" + uid;
+            RRateLimiter limiter = redissonClient.getRateLimiter(key);
+            limiter.trySetRate(RateType.OVERALL, 1, 1, RateIntervalUnit.SECONDS);
+            return limiter;
+        });
+    }
 
     /** 获取秒杀动态路径（第②步：HMAC签名） */
     public String getSeckillPath(Long seckillProductId, Long userId) {
@@ -61,10 +75,8 @@ public class SeckillApplicationService {
             throw new BusinessException(ErrorCode.FORBIDDEN.getCode(), "秒杀路径无效或已过期");
         }
 
-        // ③ Redisson 用户限流（1 QPS per user）
-        String rateLimiterKey = "seckill:ratelimit:user:" + userId;
-        RRateLimiter rateLimiter = redissonClient.getRateLimiter(rateLimiterKey);
-        rateLimiter.trySetRate(RateType.OVERALL, 1, 1, RateIntervalUnit.SECONDS);
+        // ③ Redisson 用户限流（1 QPS per user, configured once per user）
+        RRateLimiter rateLimiter = getOrCreateRateLimiter(userId);
         if (!rateLimiter.tryAcquire()) {
             throw new BusinessException(429, "操作太频繁，请稍后再试");
         }

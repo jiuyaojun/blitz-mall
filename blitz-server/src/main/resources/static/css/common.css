@@ -851,6 +851,15 @@ select.form-input:focus { background-color: var(--surface); }
 .review-item .review-footer { display: flex; gap: var(--space-md); font-size: var(--fs-small); color: var(--text-muted); }
 .review-item .review-footer button { color: var(--text-muted); cursor: pointer; }
 .review-item .review-footer button:hover { color: var(--primary); }
+.review-item .review-reply {
+  background: #F0F7FF; border-radius: 6px; padding: 10px 14px;
+  margin-top: 8px; font-size: var(--fs-small); line-height: 1.5;
+}
+.review-item .review-reply .reply-tag {
+  display: inline-block; background: var(--primary); color: #fff;
+  padding: 1px 8px; border-radius: 3px; font-size: 0.7rem;
+  font-weight: 700; margin-right: 8px;
+}
 
 /* Review form */
 .review-form {
@@ -1832,21 +1841,22 @@ tr:hover td { background: var(--surface-hover); }
 
 /* Favorites heart */
 .card-fav {
-  position: absolute; top: 8px; right: 8px; z-index: 2;
-  width: 32px; height: 32px; border-radius: 50%;
-  background: rgba(255,255,255,0.85); border: none;
-  font-size: 1rem; cursor: pointer; display: flex;
+  position: absolute; top: 8px; right: 8px; z-index: 4;
+  width: 36px; height: 36px; border-radius: 50%;
+  background: rgba(255,255,255,0.95); border: 1px solid #e0e0e0;
+  font-size: 1.1rem; cursor: pointer; display: flex;
   align-items: center; justify-content: center;
-  transition: transform 0.15s; box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  transition: all 0.15s; box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  color: #999;
 }
-.card-fav:hover { transform: scale(1.15); }
-.card-fav.faved { color: var(--danger); }
+.card-fav:hover { transform: scale(1.15); color: var(--danger); border-color: var(--danger); }
+.card-fav.faved { color: var(--danger); border-color: var(--danger); }
 
 /* ============================================================
    Compare — checkbox on card, floating bar, comparison table
    ============================================================ */
 .compare-check {
-  position: absolute; top: 8px; left: 8px; z-index: 3;
+  position: absolute; top: 8px; left: 8px; z-index: 2;
   width: 28px; height: 28px; border-radius: 4px;
   background: rgba(255,255,255,0.85); border: 1.5px solid var(--border);
   cursor: pointer; display: flex; align-items: center; justify-content: center;

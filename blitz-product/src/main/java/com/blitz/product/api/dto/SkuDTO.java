@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.util.Map;
 
 public record SkuDTO(
+    Long id,
     String name,
     Map<String, String> spec,
     BigDecimal price,

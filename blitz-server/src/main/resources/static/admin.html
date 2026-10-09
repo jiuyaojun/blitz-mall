@@ -381,9 +381,9 @@
     <div class="form-group">
       <label class="form-label">新角色 <span class="required">*</span></label>
       <select class="form-input" id="roleModalNewRole">
-        <option value="ADMIN">ADMIN - 管理员</option>
-        <option value="MERCHANT">MERCHANT - 商家</option>
-        <option value="USER">USER - 普通用户</option>
+        <option value="1">ADMIN - 管理员</option>
+        <option value="3">MERCHANT - 商家</option>
+        <option value="2">USER - 普通用户</option>
       </select>
     </div>
     <div class="btn-row">
@@ -556,10 +556,10 @@
     if (api.getAdminStats) {
       api.getAdminStats().then(function(res) {
         var d = res.data || res;
-        document.getElementById('statGMV').textContent = formatPrice(d.todayGmv || d.gmv || 0);
-        document.getElementById('statOrders').textContent = formatNumber(d.todayOrders || d.orderCount || 0);
-        document.getElementById('statUsers').textContent = formatNumber(d.userCount || d.totalUsers || 0);
-        document.getElementById('statMerchants').textContent = formatNumber(d.merchantCount || d.activeMerchants || 0);
+        document.getElementById('statGMV').textContent = formatPrice(d.gmv || d.todayGmv || 0);
+        document.getElementById('statOrders').textContent = formatNumber(d.orders || d.todayOrders || 0);
+        document.getElementById('statUsers').textContent = formatNumber(d.users || d.userCount || 0);
+        document.getElementById('statMerchants').textContent = formatNumber(d.shops || d.merchantCount || 0);
         // Trends
         var gmvUp = d.gmvTrend || d.gmvGrowth;
         if (gmvUp != null) {
@@ -580,18 +580,15 @@
           }
         }
       }).catch(function() {
-        // Fallback: load individual counts
-        var p1 = api.getProducts({page:1,size:1}).then(function(r) {
-          // Just try to trigger any load; we estimate
-        }).catch(function(){});
-        var p2 = api.get('/user/list?page=1&size=1').then(function(r) {
-          document.getElementById('statUsers').textContent = formatNumber(extractTotal(r));
-        }).catch(function(){ document.getElementById('statUsers').textContent = '-'; });
-        var p3 = api.getOrders({page:1,size:1}).then(function(r) {
+        // Fallback: load individual counts from admin endpoints
+        var p1 = api.getAdminOrders({page:1, size:1}).then(function(r) {
           document.getElementById('statOrders').textContent = formatNumber(extractTotal(r));
         }).catch(function(){ document.getElementById('statOrders').textContent = '-'; });
+        var p2 = api.getAdminUsers({page:1, size:1}).then(function(r) {
+          document.getElementById('statUsers').textContent = formatNumber(extractTotal(r));
+        }).catch(function(){ document.getElementById('statUsers').textContent = '-'; });
         // Demo fallback
-        Promise.allSettled([p1,p2,p3]).then(function() {
+        Promise.allSettled([p1, p2]).then(function() {
           if (document.getElementById('statGMV').textContent === '-') {
             document.getElementById('statGMV').textContent = formatPrice(23500);
             document.getElementById('statMerchants').textContent = '12';
@@ -605,38 +602,45 @@
       document.getElementById('statUsers').textContent = formatNumber(2840);
       document.getElementById('statMerchants').textContent = '12';
       // Load real user count
-      api.get('/user/list?page=1&size=1').then(function(r) {
+      api.getAdminUsers({page:1, size:1}).then(function(r) {
         document.getElementById('statUsers').textContent = formatNumber(extractTotal(r));
       }).catch(function(){});
-      api.getOrders({page:1,size:1}).then(function(r) {
+      api.getAdminOrders({page:1, size:1}).then(function(r) {
         document.getElementById('statOrders').textContent = formatNumber(extractTotal(r));
       }).catch(function(){});
     }
   }
 
   function renderOverviewCharts() {
-    // GMV Line Chart
-    setTimeout(function() {
+    // GMV trend — fetch real data from backend
+    api.get('/admin/trend/gmv').then(function(res) {
+      var d = res.data || res;
+      var labels = d.labels || [];
+      var values = d.values || [];
+      // Fallback if empty
+      if (labels.length === 0) {
+        labels = ['6/26','6/27','6/28','6/29','6/30','7/1','7/2'];
+        values = [0,0,0,0,0,0,0];
+      }
       Chart.render('gmvChart', {
         type: 'line',
-        labels: ['6/17','6/18','6/19','6/20','6/21','6/22','6/23'],
-        datasets: [{
-          label: 'GMV',
-          data: [12800,15200,18900,14500,22100,19800,23500],
-          color: '#FF5000'
-        }]
+        labels: labels,
+        datasets: [{ label: 'GMV', data: values, color: '#FF5000' }]
       });
-    }, 100);
+    }).catch(function() {
+      Chart.render('gmvChart', {
+        type: 'line',
+        labels: ['6/26','6/27','6/28','6/29','6/30','7/1','7/2'],
+        datasets: [{ label: 'GMV', data: [0,0,0,0,0,0,0], color: '#FF5000' }]
+      });
+    });
 
-    // Category Pie Chart
+    // Category Pie (static fallback — categories need JOIN query)
     setTimeout(function() {
       Chart.render('catPie', {
         type: 'pie',
-        labels: ['手机数码','服饰鞋包','家居日用','食品生鲜','美妆个护'],
-        datasets: [{
-          data: [35,25,18,12,10],
-          colors: ['#FF5000','#FF7A33','#FF9800','#1890FF','#00A854']
-        }]
+        labels: ['手机数码','电脑办公','服饰鞋包','家居日用','食品生鲜'],
+        datasets: [{ data: [35,25,18,12,10], colors: ['#FF5000','#FF7A33','#FF9800','#1890FF','#00A854'] }]
       });
     }, 150);
   }
@@ -666,12 +670,13 @@
       list.forEach(function(o) {
         var status = o.status || o.orderStatus || 'PENDING';
         html += '<tr>';
-        html += '<td><code style="font-size:0.8rem">#' + htmlEscape(o.orderNo || o.orderSn || o.id || '-') + '</code></td>';
-        html += '<td>' + htmlEscape((o.buyerName || o.username || o.buyerUsername || '-')) + '</td>';
-        html += '<td>' + htmlEscape((o.productName || o.productTitle || '-')) + '</td>';
-        html += '<td style="font-weight:700;color:var(--accent)">' + formatPrice(o.amount || o.totalAmount || o.payAmount || 0) + '</td>';
+        var productName = (o.items && o.items.length > 0) ? o.items[0].skuName : '-';
+        html += '<td><code style="font-size:0.8rem">#' + htmlEscape(o.orderNo || o.id || '-') + '</code></td>';
+        html += '<td>' + htmlEscape(('用户#' + o.userId) || o.buyerName || '-') + '</td>';
+        html += '<td>' + htmlEscape(productName) + '</td>';
+        html += '<td style="font-weight:700;color:var(--accent)">' + formatPrice(o.totalAmount || o.amount || 0) + '</td>';
         html += '<td><span class="status-badge ' + getStatusClass(status) + '">' + statusLabel(status) + '</span></td>';
-        html += '<td style="font-size:0.8rem;color:var(--text-muted)">' + formatTime(o.createTime || o.createdAt || o.gmtCreate) + '</td>';
+        html += '<td style="font-size:0.8rem;color:var(--text-muted)">' + formatTime(o.createTime || o.createdAt) + '</td>';
         html += '</tr>';
       });
       tbody.innerHTML = html;
@@ -762,8 +767,9 @@
 
   window.adminEditUserRole = function(userId, currentRole, username) {
     document.getElementById('roleModalUserId').textContent = userId + ' (' + username + ')';
+    var roleIdMap = {ADMIN:1, MERCHANT:3, USER:2};
     document.getElementById('roleModalCurrentRole').textContent = currentRole;
-    document.getElementById('roleModalNewRole').value = currentRole;
+    document.getElementById('roleModalNewRole').value = roleIdMap[currentRole] || 2;
     document.getElementById('roleModalSaveBtn').onclick = function() {
       var newRole = document.getElementById('roleModalNewRole').value;
       var btn = document.getElementById('roleModalSaveBtn');
@@ -774,7 +780,7 @@
       if (api.updateUserRole) {
         rolePromise = api.updateUserRole(userId, newRole);
       } else {
-        rolePromise = api.put('/admin/users/' + userId + '/role', { role: newRole });
+        rolePromise = api.put('/admin/users/' + userId + '/role', { roleId: newRole });
       }
       rolePromise.then(function() {
         showToast('角色修改成功', 'success');
@@ -930,7 +936,9 @@
     var msg = action === 'off' ? '确定要下架该商品吗？' : '确定要上架该商品吗？';
     if (!confirm(msg)) return;
     var promise;
-    if (api.toggleMerchantProduct) {
+    if (api.toggleAdminProduct) {
+      promise = api.toggleAdminProduct(productId);
+    } else if (api.toggleMerchantProduct) {
       promise = api.toggleMerchantProduct(productId);
     } else {
       promise = api.post('/admin/products/' + productId + '/toggle');
@@ -946,7 +954,9 @@
   window.adminDeleteProduct = function(productId, name) {
     if (!confirm('确定要删除商品 "' + name + '" 吗？此操作不可恢复！')) return;
     var promise;
-    if (api.deleteMerchantProduct) {
+    if (api.deleteAdminProduct) {
+      promise = api.deleteAdminProduct(productId);
+    } else if (api.deleteMerchantProduct) {
       promise = api.deleteMerchantProduct(productId);
     } else {
       promise = api.del('/admin/products/' + productId);
@@ -989,14 +999,16 @@
       empty.classList.add('hidden');
       var html = '';
       list.forEach(function(o) {
-        var status = o.status || o.orderStatus || 'PENDING';
+        normalizeOrders([o]);
+        var status = o.status || 'PENDING';
+        var productName = (o.items && o.items.length > 0) ? o.items[0].skuName : '-';
         html += '<tr>';
-        html += '<td><code style="font-size:0.8rem">#' + htmlEscape(o.orderNo || o.orderSn || o.id || '-') + '</code></td>';
-        html += '<td>' + htmlEscape(o.buyerName || o.username || o.buyerUsername || '-') + '</td>';
-        html += '<td>' + htmlEscape((o.productName || o.productTitle || '-')) + '</td>';
-        html += '<td style="font-weight:700;color:var(--accent)">' + formatPrice(o.amount || o.totalAmount || o.payAmount || 0) + '</td>';
+        html += '<td><code style="font-size:0.8rem">#' + htmlEscape(o.orderNo || o.id || '-') + '</code></td>';
+        html += '<td>' + htmlEscape(('用户#' + o.userId) || o.buyerName || '-') + '</td>';
+        html += '<td>' + htmlEscape(productName) + '</td>';
+        html += '<td style="font-weight:700;color:var(--accent)">' + formatPrice(o.totalAmount || o.amount || 0) + '</td>';
         html += '<td><span class="status-badge ' + getStatusClass(status) + '">' + statusLabel(status) + '</span></td>';
-        html += '<td style="font-size:0.8rem;color:var(--text-muted)">' + formatTime(o.createTime || o.createdAt || o.gmtCreate) + '</td>';
+        html += '<td style="font-size:0.8rem;color:var(--text-muted)">' + formatTime(o.createTime || o.createdAt) + '</td>';
         html += '<td style="white-space:nowrap">';
         html += '<button class="btn btn-outline btn-sm" onclick="adminViewOrder(' + (o.id || 0) + ')">详情</button> ';
         if (status === 'PAID' || status === 'SHIPPED') {

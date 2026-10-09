@@ -7,6 +7,7 @@ import com.blitz.ai.domain.port.KbDocumentRepository;
 import com.blitz.ai.infrastructure.rag.EmbeddingService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Profile;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.vectorstore.pgvector.PgVectorStore;
 import org.springframework.stereotype.Service;
@@ -17,8 +18,8 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @Service
+@Profile("!minimal")
 @RequiredArgsConstructor
-@org.springframework.context.annotation.Profile("!minimal")
 public class KnowledgeBaseService {
 
     private final KbDocumentRepository documentRepository;

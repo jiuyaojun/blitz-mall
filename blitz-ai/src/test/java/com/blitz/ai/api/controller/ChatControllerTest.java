@@ -89,7 +89,7 @@ class ChatControllerTest {
             msg1.setId(1L);
             ChatMessage msg2 = ChatMessage.of(1L, ChatMessage.ROLE_AI, "hi");
             msg2.setId(2L);
-            when(chatApplicationService.getMessages(1L)).thenReturn(List.of(msg1, msg2));
+            when(chatApplicationService.getMessages(1L, 1L)).thenReturn(List.of(msg1, msg2));
 
             mockMvc.perform(get("/ai/session/1/messages"))
                 .andExpect(status().isOk())
@@ -103,7 +103,7 @@ class ChatControllerTest {
         @Test
         @DisplayName("returns 200 with empty list when no messages")
         void returns200WithEmptyListWhenNoMessages() throws Exception {
-            when(chatApplicationService.getMessages(1L)).thenReturn(List.of());
+            when(chatApplicationService.getMessages(1L, 1L)).thenReturn(List.of());
 
             mockMvc.perform(get("/ai/session/1/messages"))
                 .andExpect(status().isOk())

@@ -3,9 +3,11 @@ package com.blitz.ai.infrastructure.rag;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 
 @Service
+@Profile("!minimal")
 public class RrfFusionService {
 
     private static final double K = 60.0;

@@ -5,6 +5,7 @@ import lombok.Data;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @TableName("`order`")
@@ -26,7 +27,6 @@ public class Order {
     private String receiverPhone;
     private String receiverAddress;
     private String note;
-    @Version
     private Integer version;
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
@@ -34,6 +34,9 @@ public class Order {
     private LocalDateTime updateTime;
     @TableLogic
     private Integer deleted;
+
+    @TableField(exist = false)
+    private List<OrderItem> items;
 
     // ---- Behavior methods ----
 

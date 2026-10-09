@@ -12,9 +12,21 @@ target/
 .env
 .env.*
 !.env.example
-application-minimal.yml
+# 注意：application-minimal.yml 原先在此被忽略，导致 clone 后没有数据源配置、
+#       应用无法启动。该文件只含本地开发默认值（生产用环境变量覆盖），
+#       自 2026-10-09 起改为纳入版本管理。
 
-# IDE
+# 学术交付物（论文 / 答辩材料）—— 与代码仓库无关，留在本地
+docs/graduation-thesis.md
+docs/defense-outline.md
+docs/Blitz答辩PPT.pdf
+docs/Blitz答辩PPT.pptx
+docs/Blitz答辩辅助文档.docx
+docs/答辩演示指导手册.docx
+docs/答辩演示指导手册.md
+docs/答辩辅助文档.md
+
+# IDE / 过程性产物
 .vscode/
 .superpowers/
 docs/superpowers/

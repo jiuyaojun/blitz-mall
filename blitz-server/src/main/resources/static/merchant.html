@@ -297,6 +297,10 @@
       dashboardData = res.data || res || {};
       renderStats(dashboardData);
       renderCharts(dashboardData);
+      // Update sidebar shop name from dashboard
+      if (dashboardData.shopName) {
+        document.getElementById('sidebarShopName').textContent = dashboardData.shopName;
+      }
       return loadRecentOrders();
     }).catch(function() {
       renderStats({});
@@ -309,10 +313,10 @@
 
   function renderStats(data) {
     var stats = [
-      { icon: '📦', value: data.totalProducts != null ? formatNumber(data.totalProducts) : '-', label: '商品总数', color: '#EEF2FF', iconColor: '#4F46E5' },
-      { icon: '✅', value: data.activeProducts != null ? formatNumber(data.activeProducts) : '-', label: '在售商品', color: '#D1FAE5', iconColor: '#059669' },
-      { icon: '📋', value: data.todayOrders != null ? formatNumber(data.todayOrders) : '-', label: '今日订单', color: '#FEF3C7', iconColor: '#D97706' },
-      { icon: '💰', value: data.todaySales != null ? formatPrice(data.todaySales) : '-', label: '今日销售额', color: '#FEE2E2', iconColor: '#DC2626' },
+      { icon: '📦', value: data.productCount != null ? formatNumber(data.productCount) : '-', label: '商品总数', color: '#EEF2FF', iconColor: '#4F46E5' },
+      { icon: '✅', value: data.onSaleCount != null ? formatNumber(data.onSaleCount) : '-', label: '在售商品', color: '#D1FAE5', iconColor: '#059669' },
+      { icon: '📋', value: data.todayOrders != null ? formatNumber(data.todayOrders) : '0', label: '今日订单', color: '#FEF3C7', iconColor: '#D97706' },
+      { icon: '💰', value: data.todaySales != null ? formatPrice(data.todaySales) : '¥0', label: '今日销售额', color: '#FEE2E2', iconColor: '#DC2626' },
       { icon: '🏆', value: data.totalSales != null ? formatNumber(data.totalSales) : '-', label: '累计销量', color: '#F3E8FF', iconColor: '#7C3AED' }
     ];
 
@@ -400,13 +404,16 @@
       '<th>订单号</th><th>商品</th><th>金额</th><th>状态</th><th>买家</th><th>时间</th>' +
       '</tr></thead><tbody>';
     list.forEach(function(o) {
+      normalizeOrders([o]);
+      // Show first item's skuName as product name
+      var productName = (o.items && o.items.length > 0) ? o.items[0].skuName : '-';
       html += '<tr>' +
-        '<td>' + (o.orderNo || o.orderNumber || o.id || '-') + '</td>' +
-        '<td>' + (o.productName || '-') + '</td>' +
-        '<td>' + formatPrice(o.amount || o.totalAmount || o.total) + '</td>' +
+        '<td>' + (o.orderNo || o.id || '-') + '</td>' +
+        '<td>' + productName + '</td>' +
+        '<td>' + formatPrice(o.totalAmount || 0) + '</td>' +
         '<td><span class="status-badge status-' + (o.status || 'PENDING') + '">' + statusLabel(o.status) + '</span></td>' +
-        '<td>' + (o.buyerName || o.username || o.buyerUsername || '-') + '</td>' +
-        '<td>' + formatTime(o.createTime || o.createdAt || o.time) + '</td>' +
+        '<td>' + (o.buyerName || o.username || o.buyerUsername || ('用户#' + o.userId) || '-') + '</td>' +
+        '<td>' + formatTime(o.createTime) + '</td>' +
       '</tr>';
     });
     html += '</tbody></table>';
@@ -443,20 +450,21 @@
       '<th>图片</th><th>名称</th><th>价格</th><th>库存</th><th>状态</th><th>销量</th><th>操作</th>' +
       '</tr></thead><tbody>';
     products.forEach(function(p) {
-      var statusClass = p.status === 'ON' || p.status === 'ACTIVE' || p.onSale ? 'status-COMPLETED' : 'status-CANCELLED';
-      var statusText = p.status === 'ON' || p.status === 'ACTIVE' || p.onSale ? '在售' : '下架';
-      var imgSrc = p.mainImage || p.image || '';
+      var isOnSale = p.status === 1;
+      var statusClass = isOnSale ? 'status-COMPLETED' : 'status-CANCELLED';
+      var statusText = isOnSale ? '在售' : '下架';
+      var imgSrc = p.mainImage || '';
       var imgHtml = imgSrc ? '<img src="' + escapeHtml(imgSrc) + '" class="product-img-cell" alt="' + escapeHtml(p.name || '商品') + '">' : '<div class="product-img-cell" style="display:flex;align-items:center;justify-content:center;font-size:1.2rem">📷</div>';
       html += '<tr>' +
         '<td>' + imgHtml + '</td>' +
         '<td><strong>' + (p.name || '-') + '</strong><div style="font-size:0.75rem;color:var(--text-muted)">' + (p.brand || '') + '</div></td>' +
-        '<td>' + formatPrice(p.price || p.minPrice) + '</td>' +
-        '<td>' + (p.stock != null ? p.stock : '-') + '</td>' +
+        '<td>' + formatPrice(p.minPrice) + '</td>' +
+        '<td>' + (p.skus ? p.skus.reduce(function(sum, s) { return sum + (s.stock || 0); }, 0) : '-') + '</td>' +
         '<td><span class="status-badge ' + statusClass + '">' + statusText + '</span></td>' +
-        '<td>' + formatNumber(p.sales || p.soldCount || 0) + '</td>' +
+        '<td>' + formatNumber(p.saleCount || 0) + '</td>' +
         '<td>' +
           '<button class="btn btn-outline btn-sm edit-product-btn" data-id="' + p.id + '">编辑</button> ' +
-          '<button class="btn btn-outline btn-sm toggle-product-btn" data-id="' + p.id + '">' + (p.status === 'ON' || p.status === 'ACTIVE' || p.onSale ? '下架' : '上架') + '</button> ' +
+          '<button class="btn btn-outline btn-sm toggle-product-btn" data-id="' + p.id + '">' + (isOnSale ? '下架' : '上架') + '</button> ' +
           '<button class="btn btn-danger btn-sm delete-product-btn" data-id="' + p.id + '">删除</button>' +
         '</td>' +
       '</tr>';
@@ -512,11 +520,11 @@
         document.getElementById('prodName').value = prod.name || '';
         document.getElementById('prodBrand').value = prod.brand || '';
         document.getElementById('prodDesc').value = prod.description || '';
-        document.getElementById('prodImage').value = prod.mainImage || prod.image || '';
+        document.getElementById('prodImage').value = prod.mainImage || '';
         document.getElementById('prodCategoryId').value = prod.categoryId || '';
         if (prod.skus && prod.skus.length > 0) {
           prod.skus.forEach(function(sku) {
-            addSkuRow(sku.name || sku.spec || '', sku.price || '', sku.stock || '');
+            addSkuRow(sku.name || '', sku.price || '', sku.stock || '');
           });
         }
       }
@@ -571,7 +579,7 @@
       var skuPrice = parseFloat(inputs[1].value) || 0;
       var skuStock = parseInt(inputs[2].value) || 0;
       if (skuName) {
-        skus.push({ name: skuName, spec: skuName, price: skuPrice, stock: skuStock });
+        skus.push({ name: skuName, spec: {}, price: skuPrice, stock: skuStock });
       }
     });
 
@@ -666,14 +674,16 @@
       '<th>订单号</th><th>商品</th><th>金额</th><th>状态</th><th>买家</th><th>时间</th><th>操作</th>' +
       '</tr></thead><tbody>';
     orders.forEach(function(o) {
+      normalizeOrders([o]);
+      var productName = (o.items && o.items.length > 0) ? o.items[0].skuName : '-';
       var status = o.status || 'PENDING';
       html += '<tr>' +
-        '<td>' + (o.orderNo || o.orderNumber || o.id || '-') + '</td>' +
-        '<td>' + (o.productName || '-') + '</td>' +
-        '<td>' + formatPrice(o.amount || o.totalAmount || o.total) + '</td>' +
+        '<td>' + (o.orderNo || o.id || '-') + '</td>' +
+        '<td>' + productName + '</td>' +
+        '<td>' + formatPrice(o.totalAmount || 0) + '</td>' +
         '<td><span class="status-badge status-' + status + '">' + statusLabel(status) + '</span></td>' +
-        '<td>' + (o.buyerName || o.username || o.buyerUsername || '-') + '</td>' +
-        '<td>' + formatTime(o.createTime || o.createdAt || o.time) + '</td>' +
+        '<td>' + (o.buyerName || o.username || ('用户#' + o.userId) || '-') + '</td>' +
+        '<td>' + formatTime(o.createTime) + '</td>' +
         '<td>' + (status === 'PAID' ? '<button class="btn btn-success btn-sm ship-order-btn" data-id="' + o.id + '">发货</button>' : '-') + '</td>' +
       '</tr>';
     });
@@ -770,14 +780,11 @@
   }
 
   function loadMySeckillProducts() {
-    // Try to load merchant's seckill products from API or use empty
-    return api.get('/merchant/seckill-products').then(function(res) {
-      mySeckillProducts = res.data || [];
-      renderMySeckillTable();
-    }).catch(function() {
-      mySeckillProducts = [];
-      renderMySeckillTable();
-    });
+    // Backend does not yet expose a merchant seckill-products endpoint;
+    // keep the table rendered as empty until the endpoint is implemented.
+    mySeckillProducts = [];
+    renderMySeckillTable();
+    return Promise.resolve();
   }
 
   function renderMySeckillTable() {
