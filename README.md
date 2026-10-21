@@ -2,7 +2,8 @@
 
 > **AI-Integrated High-Concurrency E-Commerce Platform**  
 > Java 17 + Spring Boot 4.0 + Spring AI 2.0 -- Blitz Smart Mall
-[![Java](https://img.shields.io/badge/Java-21-%23ED8B00?logo=openjdk&logoColor=white)](https://openjdk.org/projects/jdk/21/)
+[![CI](https://github.com/jiuyaojun/blitz-mall/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/jiuyaojun/blitz-mall/actions/workflows/ci.yml)
+[![Java](https://img.shields.io/badge/Java-17-%23ED8B00?logo=openjdk&logoColor=white)](https://openjdk.org/projects/jdk/17/)
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.0.0-%236DB33F?logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot)
 [![Spring AI](https://img.shields.io/badge/Spring%20AI-2.0.0-%236DB33F?logo=spring&logoColor=white)](https://spring.io/projects/spring-ai)
 [![MyBatis-Plus](https://img.shields.io/badge/MyBatis--Plus-3.5.8-%23C70039)](https://baomidou.com/)
@@ -78,6 +79,14 @@
 > 当前 **Sentinel、Seata、Redisson、Spring AI、PgVector 均未启用**，
 > Kafka 链路在 minimal profile 下也是断开的（`go.sh` 把 `OrderEventPublisher`
 > 改成了可空以容忍缺失）。
+>
+> 默认的 `minimal` profile 还会**整段关闭两条核心链路的 Controller/Service**：
+> `SeckillController`、`SeckillApplicationService`、`ChatController`、
+> `ChatApplicationService` 都标注了 `@Profile("!minimal")`。因此默认启动后：
+> `/seckill/**` 不存在；`/ai/chat/stream` 由 `SimpleAiController` 提供
+> （无 API key 时是规则兜底，不是 RAG）；完整 RAG 与 Lua/Kafka 秒杀链路只在
+> `!minimal` profile 且 Redis/Kafka/PgVector 都可用时才成立。
+>
 > 判断某个能力能不能用，请以配置和代码为准，不要以架构图为依据。
 
 ---
@@ -134,7 +143,7 @@
 | **RDBMS** | MySQL | 8.0 | Primary business data |
 | **Vector DB** | PostgreSQL + pgvector | 16 | AI embeddings + hybrid search |
 | **Cache** | Redis + Redisson | 7.2 / 3.42 | Distributed lock, Lua, rate limit |
-| **MQ** | Apache Kafka | 3.6 | Async order events |
+| **MQ** | Apache Kafka | 3.6 broker / 3.9.0 client | Async order events |
 | **Flow Control** | Sentinel（未启用） | 2025.0.0.0 | 规则已配置，但全工程无 `@SentinelResource` 切点，限流不生效 |
 | **Dist. TX** | Seata（未启用） | 2025.0.0.0 | 全 profile `seata.enabled: false`，无 `@GlobalTransactional` |
 | **Migration** | Flyway | (Spring Boot managed) | Schema versioning |
@@ -142,7 +151,7 @@
 | **Utilities** | Hutool | 5.8.35 | All-in-one toolset |
 | **Mapping** | MapStruct | 1.6.3 | Compile-time DTO mapping |
 | **Connection Pool** | Druid + HikariCP | 1.2.24 | MySQL (Druid) + PG (Hikari) |
-| **Container** | Docker Compose | 3.9 | Infrastructure orchestration |
+| **Container** | Docker Compose | v2 (no `version:` pin) | Infrastructure orchestration |
 | **Build** | Maven | 3.x | Multi-module build |
 
 ---
@@ -160,8 +169,12 @@ blitz/                           (parent POM, version 1.0.0-SNAPSHOT)
 ├── blitz-seckill/   ★          Seckill bounded context -- DDD 4-layer + Lua + Kafka + WebSocket
 ├── blitz-ai/        ★          AI bounded context -- DDD 4-layer + pgvector + RAG + SSE
 ├── blitz-server/               Monolithic startup: BlitzApplication + Flyway migrations
-└── blitz-gateway/              [Reserved] Future microservice API gateway
+                                [planned, no directory in this repo] blitz-gateway
 ```
+
+> 注：`blitz-server` 实际还包含 `merchant/`、`review/`（Review / Coupon / Refund /
+> Shop / Filter / Admin / SimpleAi）等控制器；上面的树只列模块级目录，以
+> `src/main/java` 下的实际文件为准。
 
 ### DDD 4-Layer Pattern (per bounded context)
 
@@ -190,16 +203,21 @@ src/main/java/com/blitz/<context>/
 
 ## 5. Database Design
 
-5 independent schemas managed by Flyway, 20 tables total:
+Flyway manages **one MySQL database** (`blitz`, configured in
+`application-minimal.yml` / `application-dev.yml`) plus, only under the `ai`
+profile, **one PostgreSQL database** (`blitz_ai`) for pgvector. Migrations
+V1–V11 currently produce **23 MySQL tables** (V10 drops the unused
+`product_attribute`):
 
-| Schema | Tables | Flyway Migration |
-|--------|--------|------------------|
-| `blitz_product` | `product_category`, `product_spu`, `product_sku`, `sku_stock` | V1 |
-| `blitz_user` | `role`, `user`, `user_address` | V2 |
-| `blitz_order` | `order`, `order_item`, `order_event`, `order_operate_log` | V3 |
-| `blitz_seckill` | `seckill_activity`, `seckill_product`, `seckill_order`, `seckill_stock_flow` | V4 |
-| `blitz_ai` | `kb_document`, `kb_chunk`, `chat_session`, `chat_message` | V5 |
-| `blitz_ai` (pgvector) | `vector_store` (pgvector extension) | Auto-managed by Spring AI |
+| Database | Tables | Flyway Migration |
+|----------|--------|------------------|
+| MySQL `blitz` | product: `product_category`, `product`, `sku`, `sku_stock` (4) | V1 |
+| MySQL `blitz` | user: `role`, `user`, `address` (3) | V2 |
+| MySQL `blitz` | order: `order`, `order_item`, `order_event`, `order_operate_log` (4) | V3 |
+| MySQL `blitz` | seckill: `seckill_activity`, `seckill_product`, `seckill_order`, `seckill_stock_flow` (4) | V4 |
+| MySQL `blitz` | ai: `kb_document`, `kb_chunk`, `chat_session`, `chat_message` (4) | V5 |
+| MySQL `blitz` | shop / review / coupon: `shop`, `blitz_review`, `coupon`, `user_coupon` (4) | V6–V9 |
+| PostgreSQL `blitz_ai` | `vector_store` (pgvector extension) | Auto-managed by Spring AI; `!minimal` only |
 
 **Architecture highlights:**
 - Seckill read/write split: hot stock in Redis (Lua atomic pre-deduct), orders persisted in MySQL
@@ -232,6 +250,11 @@ This starts:
 - Kafka 3.6 on `:9092`
 - PostgreSQL 16 + pgvector on `:5432` (blitz/blitz, database: blitz_ai)
 
+> No Docker available? `mvn test` needs no middleware at all. For a UI-only
+> local demo, a single MySQL 8.0 database named `blitz` is enough:
+> run with `--spring.profiles.active=minimal`. In that profile `/seckill/**`
+> and the RAG `/ai/**` implementation are not registered (see §1).
+
 ### Step 2: Build
 
 ```bash
@@ -255,10 +278,10 @@ Or via IDE: run `com.blitz.BlitzApplication` main class.
 
 ```bash
 curl http://localhost:8080/api/health
-# → {"code":0,"msg":"success","data":"OK"}
+# → {"code":0,"msg":"success","data":{"status":"UP","timestamp":"...","app":"Blitz 智能商城","version":"1.0.0"}}
 ```
 
-Set the AI API key (required for RAG chat):
+Set the AI API key (required for RAG chat; `minimal` falls back to canned replies):
 
 ```bash
 export OPENAI_API_KEY=sk-xxxxx
@@ -268,6 +291,8 @@ export OPENAI_BASE_URL=https://api.openai.com   # or your proxy
 ### Step 5: Explore APIs
 
 Open **http://localhost:8080/doc.html** for Knife4j interactive API documentation.
+`/doc.html` and `/v3/api-docs/**` are **not** in `PUBLIC_PATHS`; send a valid
+`Authorization: Bearer <jwt>` header or log in first.
 
 ---
 
@@ -279,22 +304,22 @@ Open **http://localhost:8080/doc.html** for Knife4j interactive API documentatio
 | User | POST | `/user/register` | No | Register (BCrypt) |
 | User | POST | `/user/login` | No | Login → JWT |
 | User | GET/POST | `/user/address/**` | Yes | Address CRUD |
-| Product | GET | `/product/**` | Yes | SPU/SKU query |
-| Product | GET | `/category/**` | Yes | Category tree |
-| Order | POST | `/order/create` | Yes | Create order |
+| Product | GET | `/product/**` | No | SPU/SKU query (public read) |
+| Product | GET | `/product/category/**` | No | Category tree |
+| Order | POST | `/order` | Yes | Create order |
 | Order | GET | `/order/**` | Yes | Order query, status |
-| **Seckill** | GET | `/seckill/path` | Yes | Get HMAC dynamic path |
-| **Seckill** | POST | `/seckill/execute` | Yes | Execute seckill |
-| **Seckill** | GET | `/seckill/result` | Yes | Poll result (fallback) |
-| **Seckill** | WS | `/ws/seckill` | Yes | WebSocket push (real-time) |
-| Seckill | POST | `/seckill/admin/warmup/{id}` | ADMIN | Warmup stock to Redis |
-| **AI** | POST | `/ai/chat/stream` | Yes | **RAG streaming chat (SSE)** |
+| **Seckill** | GET | `/seckill/path` | Yes | Get HMAC dynamic path (`!minimal` only) |
+| **Seckill** | POST | `/seckill/execute` | Yes | Execute seckill (`!minimal` only) |
+| **Seckill** | GET | `/seckill/result` | Yes | Poll result (fallback, `!minimal` only) |
+| **Seckill** | WS | `/ws/seckill` | Yes | WebSocket push (real-time, `!minimal` only) |
+| Seckill | POST | `/seckill/admin/warmup/{id}` | ADMIN | Warmup stock to Redis (`!minimal` only) |
+| **AI** | POST | `/ai/chat/stream` | Yes | RAG streaming chat (SSE, `!minimal`); canned fallback in `minimal` |
 | AI | POST | `/ai/session` | Yes | Create chat session |
 | AI | GET | `/ai/session/{id}/messages` | Yes | Get session history |
-| AI | POST | `/ai/kb/documents` | ADMIN | Upload knowledge document |
-| AI | DELETE | `/ai/kb/documents/{id}` | ADMIN | Delete knowledge document |
+| AI | POST | `/ai/kb/document` | ADMIN | Upload knowledge document (`!minimal` only) |
+| AI | DELETE | `/ai/kb/document/{id}` | ADMIN | Delete knowledge document (`!minimal` only) |
 
-**Authentication:** Add `Authorization: Bearer <jwt_token>` header. Whitelisted paths: `/user/login`, `/user/register`, `/doc.html`, `/webjars/**`, `/v3/api-docs/**`, `/actuator/health`, `/api/health`.
+**Authentication:** Add `Authorization: Bearer <jwt_token>` header. Whitelisted paths (see `SecurityConfig.PUBLIC_PATHS`): `/`, `/*.html`, `/favicon.ico`, `/css/**`, `/js/**`, `/img/**`, `/fonts/**`, `/user/login`, `/user/register`, `/product/list`, `/product/category/**`, `/product/search`, `/product/*`, `/review/list/**`, `/review/stats/**`, `/shop/**`, `/coupon/official`, `/coupon/shop/**`, `/filter/**`, `/api/health`. `/doc.html` and `/v3/api-docs/**` are **not** public.
 
 ---
 
@@ -761,6 +786,10 @@ blitz/
             ├── V4__init_blitz_seckill.sql
             └── V5__init_blitz_ai.sql
 ```
+
+> 该树为节选：`V6–V11` 迁移（shop/review/coupon/seed）、`application-minimal.yml` /
+> `application-prod.yml`，以及 `blitz-server` 下的 `merchant/`、`review/`
+> 控制器未展开；以实际目录为准。
 
 ---
 
