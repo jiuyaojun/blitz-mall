@@ -3,6 +3,7 @@ package com.blitz.data.config;
 import com.baomidou.mybatisplus.annotation.DbType;
 import com.baomidou.mybatisplus.core.handlers.MetaObjectHandler;
 import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
+import com.baomidou.mybatisplus.extension.plugins.inner.OptimisticLockerInnerInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
 import com.baomidou.mybatisplus.extension.spring.MybatisSqlSessionFactoryBean;
 import org.apache.ibatis.reflection.MetaObject;
@@ -37,6 +38,11 @@ public class MyBatisPlusConfig {
     @Bean
     public MybatisPlusInterceptor mybatisPlusInterceptor() {
         MybatisPlusInterceptor interceptor = new MybatisPlusInterceptor();
+        // 乐观锁拦截器必须注册，否则实体上的 @Version 只是装饰：
+        // updateById 不会带 WHERE version = ?，也不会自动 version + 1，
+        // 并发下后提交的人会静默覆盖先提交的状态。
+        // 注意：乐观锁要在分页之前加（MP 官方推荐顺序）。
+        interceptor.addInnerInterceptor(new OptimisticLockerInnerInterceptor());
         interceptor.addInnerInterceptor(new PaginationInnerInterceptor(DbType.MYSQL));
         return interceptor;
     }

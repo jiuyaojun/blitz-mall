@@ -27,6 +27,7 @@ public class Order {
     private String receiverPhone;
     private String receiverAddress;
     private String note;
+    @Version
     private Integer version;
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;

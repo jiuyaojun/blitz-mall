@@ -39,11 +39,20 @@ public class SkuStockRepositoryImpl implements SkuStockRepository {
 
     @Override
     public int deductStock(Long skuId, int qty, int oldVersion) {
+        // 三个条件缺一不可：
+        // 1) eq(version, oldVersion) —— CAS：版本变了说明别人先改过，本次放弃；
+        // 2) ge(stock, qty)          —— 原子防空：库存不足时这条 UPDATE 匹配 0 行，
+        //                               而不是把 stock 扣成负数（调用方的 "先查再扣" 是 TOCTOU，
+        //                               两个线程可以同时通过检查）；
+        // 3) version = version + 1   —— 之前漏了这句，版本号永远不变，
+        //                               第二次扣减照样命中同一个 version，CAS 形同虚设。
         return skuStockMapper.update(null,
             new LambdaUpdateWrapper<SkuStock>()
                 .eq(SkuStock::getSkuId, skuId)
                 .eq(SkuStock::getVersion, oldVersion)
-                .setSql("stock = stock - " + qty)
+                .ge(SkuStock::getStock, qty)
+                .setSql("version = version + 1")
+                .apply("stock = stock - {0}", qty)
         );
     }
 

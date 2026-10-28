@@ -3,6 +3,8 @@ package com.blitz.order.infrastructure.repository;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.blitz.common.exception.BusinessException;
+import com.blitz.common.exception.ErrorCode;
 import com.blitz.order.domain.model.Order;
 import com.blitz.order.domain.port.OrderRepository;
 import com.blitz.order.infrastructure.mapper.OrderMapper;
@@ -77,7 +79,15 @@ public class OrderRepositoryImpl implements OrderRepository {
         if (order.getId() == null) {
             orderMapper.insert(order);
         } else {
-            orderMapper.updateById(order);
+            // 注册了 OptimisticLockerInnerInterceptor 之后，updateById 会带上
+            // WHERE version = ? 并自动 version + 1。影响行数为 0 意味着
+            // 「这条订单在我读出来之后被别人改过」——必须抛出去，
+            // 否则并发改状态会静默覆盖（例如同时发货和退款，后提交的直接赢）。
+            int affected = orderMapper.updateById(order);
+            if (affected == 0) {
+                throw new BusinessException(ErrorCode.SYSTEM_ERROR.getCode(),
+                        "订单状态已被并发修改，请重试");
+            }
         }
         return order;
     }
@@ -89,6 +99,9 @@ public class OrderRepositoryImpl implements OrderRepository {
                 .eq(Order::getId, id)
                 .eq(Order::getVersion, oldVersion)
                 .set(Order::getStatus, newStatus)
+                // 与 SkuStock.deductStock 同一个坑：只比版本不改版本，
+                // 第二次调用仍会命中同一个 oldVersion，CAS 失效。
+                .setSql("version = version + 1")
         );
     }
 }
