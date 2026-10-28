@@ -9,7 +9,6 @@ import com.blitz.order.domain.port.OrderEventRepository;
 import com.blitz.order.domain.port.OrderItemRepository;
 import com.blitz.order.domain.port.OrderRepository;
 import com.blitz.order.infrastructure.mapper.OrderOperateLogMapper;
-import com.blitz.order.infrastructure.messaging.OrderEventPublisher;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -37,7 +36,6 @@ class OrderApplicationServiceTest {
     @Mock private OrderRepository orderRepository;
     @Mock private OrderItemRepository orderItemRepository;
     @Mock private OrderEventRepository orderEventRepository;
-    @Mock private OrderEventPublisher orderEventPublisher;
     @Mock private OrderOperateLogMapper orderOperateLogMapper;
     @Mock private StockDeductionService stockDeductionService;
 
@@ -51,16 +49,8 @@ class OrderApplicationServiceTest {
 
     @BeforeEach
     void setUp() {
-        // orderEventPublisher 在 OrderApplicationService 里是 @Autowired(required = false)
-        // 的非 final 字段（minimal 兼容补丁把它从 final 改掉了），因此不在 Lombok
-        // @RequiredArgsConstructor 生成的构造器参数里。
-        // Mockito 的 @InjectMocks 只采用一种注入策略：存在可满足的构造器时只用构造器，
-        // 不会再做字段注入 —— 于是该字段恒为 null，
-        // 服务里 `if (orderEventPublisher != null)` 短路，publishXxx 永远不会被调用。
-        // 生产环境由 Spring 正常注入，这里显式补上。
-        org.springframework.test.util.ReflectionTestUtils.setField(
-            service, "orderEventPublisher", orderEventPublisher);
-
+        // 事件投递已从服务里移走（改由 OrderEventRelay 扫 order_event 表投递），
+        // 服务只负责把事件落库，所以这里不再需要往服务里塞 publisher。
         sampleOrder = new Order();
         sampleOrder.setId(1L);
         sampleOrder.setOrderNo("SN2024061800001");
@@ -72,9 +62,6 @@ class OrderApplicationServiceTest {
 
         // Default mocks (lenient because not all tests use every stub)
         lenient().doNothing().when(stockDeductionService).deductWithRetry(anyList(), anyInt());
-        lenient().doNothing().when(orderEventPublisher).publishOrderCreated(any(), any());
-        lenient().doNothing().when(orderEventPublisher).publishOrderPaid(any());
-        lenient().doNothing().when(orderEventPublisher).publishOrderCancelled(any(), anyString());
         lenient().when(orderOperateLogMapper.insert(any(OrderOperateLog.class))).thenReturn(1);
     }
 
@@ -123,7 +110,7 @@ class OrderApplicationServiceTest {
         verify(orderEventRepository).save(any());
 
         // Verify Kafka event published
-        verify(orderEventPublisher).publishOrderCreated(any(Order.class), anyList());
+        verify(orderEventRepository).save(any());
 
         // Verify operate log inserted
         verify(orderOperateLogMapper).insert(any(OrderOperateLog.class));
@@ -176,7 +163,7 @@ class OrderApplicationServiceTest {
 
         verify(orderRepository).save(sampleOrder);
         verify(orderEventRepository).save(any());
-        verify(orderEventPublisher).publishOrderPaid(sampleOrder);
+        verify(orderEventRepository).save(any());
         verify(orderOperateLogMapper).insert(any(OrderOperateLog.class));
     }
 
@@ -234,7 +221,7 @@ class OrderApplicationServiceTest {
         verify(orderRepository).save(sampleOrder);
         verify(stockDeductionService).restoreStock(1L);
         verify(orderEventRepository).save(any());
-        verify(orderEventPublisher).publishOrderCancelled(sampleOrder, "不想要了");
+        verify(orderEventRepository).save(any());
         verify(orderOperateLogMapper).insert(any(OrderOperateLog.class));
     }
 

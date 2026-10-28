@@ -17,8 +17,19 @@ public class OrderEvent {
     private Long orderId;
     private String eventType; // ORDER_CREATED, ORDER_PAID, ORDER_SHIPPED, ORDER_CANCELLED
     private String eventData; // JSON
+
+    /** 投递状态：PENDING 待投递 / SENT 已投递 / FAILED 超过重试上限。 */
+    private String status;
+    private Integer retryCount;
+    private LocalDateTime sentAt;
+    private LocalDateTime nextRetryAt;
+
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createdAt;
+
+    public static final String STATUS_PENDING = "PENDING";
+    public static final String STATUS_SENT = "SENT";
+    public static final String STATUS_FAILED = "FAILED";
 
     // Event type constants
     public static final String ORDER_CREATED = "ORDER_CREATED";

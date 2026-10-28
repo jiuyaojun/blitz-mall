@@ -7,11 +7,9 @@ import com.blitz.order.domain.model.*;
 import com.blitz.order.domain.port.OrderEventRepository;
 import com.blitz.order.domain.port.OrderItemRepository;
 import com.blitz.order.domain.port.OrderRepository;
-import com.blitz.order.infrastructure.messaging.OrderEventPublisher;
 import com.blitz.order.infrastructure.mapper.OrderOperateLogMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,9 +30,8 @@ public class OrderApplicationService {
     private final OrderOperateLogMapper orderOperateLogMapper;
     private final StockDeductionService stockDeductionService;
 
-    // Optional injection: only available in non-minimal profiles
-    @Autowired(required = false)
-    private OrderEventPublisher orderEventPublisher;
+    // 事件的投递不在这里做：业务事务只负责把事件写进 order_event（PENDING），
+    // 由 OrderEventRelay 扫表投递。见 infrastructure/outbox。
 
     /**
      * 创建订单（核心链路）
@@ -95,11 +92,6 @@ public class OrderApplicationService {
             OrderOperateLog.of(order.getId(), "ORDER_CREATED", "USER", "用户下单")
         );
 
-        // 8. 异步发布 Kafka 事件（minimal 模式下 orderEventPublisher 为 null）
-        if (orderEventPublisher != null) {
-            orderEventPublisher.publishOrderCreated(order, orderItems);
-        }
-
         log.info("Order created: orderNo={}, userId={}, amount={}", orderNo, userId, totalAmount);
         return order;
     }
@@ -129,10 +121,6 @@ public class OrderApplicationService {
             OrderOperateLog.of(order.getId(), "ORDER_PAID", "USER", "用户支付")
         );
 
-        // Kafka 异步通知（minimal 模式下 orderEventPublisher 为 null）
-        if (orderEventPublisher != null) {
-            orderEventPublisher.publishOrderPaid(order);
-        }
 
         log.info("Order paid: orderNo={}, paymentMethod={}", order.getOrderNo(), paymentMethod);
     }
@@ -165,10 +153,6 @@ public class OrderApplicationService {
             OrderOperateLog.of(order.getId(), "ORDER_CANCELLED", "USER", reason)
         );
 
-        // Kafka 异步通知（minimal 模式下 orderEventPublisher 为 null）
-        if (orderEventPublisher != null) {
-            orderEventPublisher.publishOrderCancelled(order, reason);
-        }
 
         log.info("Order cancelled: orderNo={}, reason={}", order.getOrderNo(), reason);
     }
